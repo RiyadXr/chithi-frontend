@@ -3,24 +3,935 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chithi - Secure Chat</title>
+    <title>Chithi - Modern Secure Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* ALL THE CSS CODE FROM THE PREVIOUS RESPONSE GOES HERE */
-        /* Copy the entire style section from the previous HTML file */
+        :root {
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #8b5cf6;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --light-gray: #e2e8f0;
+            --border-radius: 16px;
+            --border-radius-sm: 8px;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            height: 90vh;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 18px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+
+        .logo i {
+            font-size: 1.6rem;
+            background: rgba(255, 255, 255, 0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+
+        .status.online {
+            color: #bbf7d0;
+        }
+
+        .status.offline {
+            color: #fecaca;
+        }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 30px;
+            text-align: center;
+            gap: 24px;
+            background-color: var(--light);
+        }
+
+        .welcome-icon {
+            font-size: 5rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .welcome-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1.2;
+        }
+
+        .welcome-subtitle {
+            color: var(--gray);
+            line-height: 1.6;
+            font-size: 1rem;
+            max-width: 320px;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+        }
+
+        /* PIN Screen */
+        .pin-container {
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            text-align: center;
+            background-color: var(--light);
+        }
+
+        .pin-title {
+            color: var(--dark);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .pin-subtitle {
+            color: var(--gray);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .pin-input-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .pin-input {
+            width: 60px;
+            height: 70px;
+            border: 2px solid var(--light-gray);
+            border-radius: var(--border-radius-sm);
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            outline: none;
+            transition: var(--transition);
+            background: white;
+        }
+
+        .pin-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+        }
+
+        .pin-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: var(--dark);
+            border: 1px solid var(--light-gray);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--light);
+            border-color: var(--gray);
+        }
+
+        /* Chat Screen */
+        #chatScreen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--light);
+        }
+
+        .connection-status {
+            padding: 12px 20px;
+            background-color: #dbeafe;
+            border-radius: 0 0 var(--border-radius-sm) var(--border-radius-sm);
+            font-size: 0.85rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: messageAppear 0.3s ease-out;
+        }
+
+        @keyframes messageAppear {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background-color: white;
+            color: var(--dark);
+            border: 1px solid var(--light-gray);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-text {
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            text-align: right;
+        }
+
+        .message-actions {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 4px;
+            display: none;
+            gap: 4px;
+        }
+
+        .message:hover .message-actions {
+            display: flex;
+        }
+
+        .reaction-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: var(--transition);
+        }
+
+        .reaction-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .reactions-container {
+            display: flex;
+            gap: 4px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        .reaction {
+            background: white;
+            border-radius: 12px;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            border: 1px solid var(--light-gray);
+        }
+
+        .typing-indicator {
+            padding: 8px 20px;
+            font-style: italic;
+            color: var(--gray);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--gray);
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typingAnimation {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .input-container {
+            padding: 16px;
+            background-color: white;
+            border-top: 1px solid var(--light-gray);
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .emoji-btn {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .emoji-btn:hover {
+            background-color: var(--light-gray);
+        }
+
+        .message-input-container {
+            flex: 1;
+            position: relative;
+        }
+
+        .message-input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 1px solid var(--light-gray);
+            border-radius: 24px;
+            outline: none;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            resize: none;
+            max-height: 120px;
+            min-height: 50px;
+        }
+
+        .message-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .send-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
+        }
+
+        .send-btn:hover {
+            background-color: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .emoji-picker {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 16px;
+            width: 300px;
+            display: none;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .emoji-picker.show {
+            display: grid;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .emoji-option {
+            font-size: 1.4rem;
+            cursor: pointer;
+            text-align: center;
+            padding: 4px;
+            border-radius: var(--border-radius-sm);
+            transition: var(--transition);
+        }
+
+        .emoji-option:hover {
+            background-color: var(--light-gray);
+            transform: scale(1.1);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .container {
+                height: 95vh;
+                max-width: 100%;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            .pin-input {
+                width: 55px;
+                height: 65px;
+            }
+            
+            .welcome-title {
+                font-size: 1.8rem;
+            }
+            
+            .emoji-picker {
+                width: 280px;
+                left: -20px;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- ALL THE HTML CODE FROM THE PREVIOUS RESPONSE GOES HERE -->
-    <!-- Copy the entire body section from the previous HTML file -->
-    
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-paper-plane"></i>
+                <span>Chithi</span>
+            </div>
+            <div class="status offline" id="status">
+                <i class="fas fa-circle"></i>
+                <span>Disconnected</span>
+            </div>
+        </div>
+        
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="welcome-screen">
+            <i class="fas fa-comments welcome-icon"></i>
+            <h1 class="welcome-title">Welcome to Chithi</h1>
+            <p class="welcome-subtitle">Create a PIN and share it with your contact to start a secure, private chat. No registration required.</p>
+            <button class="btn btn-primary" id="startChatBtn">
+                <i class="fas fa-comment-dots"></i>
+                Start Chatting
+            </button>
+        </div>
+        
+        <!-- PIN Screen -->
+        <div id="pinScreen" class="pin-container hidden">
+            <h2 class="pin-title">Enter Chat PIN</h2>
+            <p class="pin-subtitle">Create a new PIN or enter an existing one to join a chat</p>
+            <div class="pin-input-container">
+                <input type="text" maxlength="1" class="pin-input" id="pin1">
+                <input type="text" maxlength="1" class="pin-input" id="pin2">
+                <input type="text" maxlength="1" class="pin-input" id="pin3">
+                <input type="text" maxlength="1" class="pin-input" id="pin4">
+            </div>
+            <div class="pin-actions">
+                <button class="btn btn-secondary" id="clearPinBtn">
+                    <i class="fas fa-eraser"></i>
+                    Clear
+                </button>
+                <button class="btn btn-primary" id="joinChatBtn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Join Chat
+                </button>
+            </div>
+        </div>
+        
+        <!-- Chat Screen -->
+        <div id="chatScreen" class="hidden">
+            <div class="connection-status hidden" id="connectionStatus">
+                <i class="fas fa-info-circle"></i>
+                <span>Enter the same PIN on another device to start chatting</span>
+            </div>
+            
+            <div class="chat-container" id="chatContainer">
+                <!-- Messages will appear here -->
+                <div class="message received">
+                    <div class="message-text">Welcome to Chithi! Your messages are secure and private. 😊</div>
+                    <div class="message-time">12:00 PM</div>
+                </div>
+            </div>
+            
+            <div class="typing-indicator hidden" id="typingIndicator">
+                <span>Someone is typing</span>
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <button class="emoji-btn" id="emojiBtn">😊</button>
+                
+                <div class="message-input-container">
+                    <textarea class="message-input" id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+                    
+                    <div class="emoji-picker" id="emojiPicker">
+                        <!-- Emojis will be added by JavaScript -->
+                    </div>
+                </div>
+                
+                <button class="send-btn" id="sendBtn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script>
-        // Replace this with your Render backend URL after deployment
+        // DOM Elements
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const pinScreen = document.getElementById('pinScreen');
+        const chatScreen = document.getElementById('chatScreen');
+        const startChatBtn = document.getElementById('startChatBtn');
+        const clearPinBtn = document.getElementById('clearPinBtn');
+        const joinChatBtn = document.getElementById('joinChatBtn');
+        const pinInputs = document.querySelectorAll('.pin-input');
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const status = document.getElementById('status');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const emojiBtn = document.getElementById('emojiBtn');
+        const emojiPicker = document.getElementById('emojiPicker');
+
+        // Socket.io connection - Use your Render backend URL here
         const BACKEND_URL = 'https://chithi-backend.onrender.com';
-        
-        // ALL THE JAVASCRIPT CODE FROM THE PREVIOUS RESPONSE GOES HERE
-        // Copy the entire script section from the previous HTML file
+        const socket = io(BACKEND_URL);
+
+        // App state
+        let currentPin = '';
+        let isTyping = false;
+        let typingTimer;
+
+        // Popular emojis for the picker
+        const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
+
+        // Initialize the app
+        function init() {
+            setupEventListeners();
+            renderEmojiPicker();
+            setupMessageInput();
+        }
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            startChatBtn.addEventListener('click', showPinScreen);
+            clearPinBtn.addEventListener('click', clearPin);
+            joinChatBtn.addEventListener('click', joinChat);
+            sendBtn.addEventListener('click', sendMessage);
+            emojiBtn.addEventListener('click', toggleEmojiPicker);
+            
+            messageInput.addEventListener('input', function() {
+                handleTyping();
+                autoResizeTextarea(this);
+            });
+            
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Pin input handling
+            pinInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    if (e.target.value.length === 1 && index < pinInputs.length - 1) {
+                        pinInputs[index + 1].focus();
+                    }
+                });
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && index > 0 && e.target.value === '') {
+                        pinInputs[index - 1].focus();
+                    }
+                });
+            });
+
+            // Socket event handlers
+            socket.on('connect', handleSocketConnect);
+            socket.on('disconnect', handleSocketDisconnect);
+            socket.on('user_joined', handleUserJoined);
+            socket.on('user_left', handleUserLeft);
+            socket.on('message', handleNewMessage);
+            socket.on('typing_start', handleTypingStart);
+            socket.on('typing_stop', handleTypingStop);
+            socket.on('message_reaction', handleMessageReaction);
+        }
+
+        // Socket event handlers
+        function handleSocketConnect() {
+            status.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
+            status.className = 'status online';
+        }
+
+        function handleSocketDisconnect() {
+            status.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
+            status.className = 'status offline';
+        }
+
+        function handleUserJoined(data) {
+            addSystemMessage('Someone joined the chat');
+            connectionStatus.classList.add('hidden');
+        }
+
+        function handleUserLeft(data) {
+            addSystemMessage('Someone left the chat');
+        }
+
+        function handleNewMessage(data) {
+            addMessage(data.message, data.sender, data.timestamp, 'received', data.messageId);
+        }
+
+        function handleTypingStart() {
+            typingIndicator.classList.remove('hidden');
+        }
+
+        function handleTypingStop() {
+            typingIndicator.classList.add('hidden');
+        }
+
+        function handleMessageReaction(data) {
+            updateMessageReaction(data.messageId, data.reaction);
+        }
+
+        // UI Functions
+        function showPinScreen() {
+            welcomeScreen.classList.add('hidden');
+            pinScreen.classList.remove('hidden');
+            pinInputs[0].focus();
+        }
+
+        function clearPin() {
+            pinInputs.forEach(input => {
+                input.value = '';
+            });
+            pinInputs[0].focus();
+        }
+
+        function joinChat() {
+            currentPin = '';
+            pinInputs.forEach(input => {
+                currentPin += input.value;
+            });
+            
+            if (currentPin.length !== 4) {
+                alert('Please enter a 4-digit PIN');
+                return;
+            }
+            
+            pinScreen.classList.add('hidden');
+            chatScreen.classList.remove('hidden');
+            connectionStatus.classList.remove('hidden');
+            
+            // Join the room with the PIN
+            socket.emit('join_room', { pin: currentPin });
+            
+            // Focus on message input
+            messageInput.focus();
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+            
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const messageId = generateMessageId();
+            
+            // Add message to UI
+            addMessage(message, 'You', timestamp, 'sent', messageId);
+            
+            // Send message via socket
+            socket.emit('send_message', {
+                pin: currentPin,
+                message: message,
+                timestamp: timestamp,
+                messageId: messageId
+            });
+            
+            // Clear input
+            messageInput.value = '';
+            autoResizeTextarea(messageInput);
+            
+            // Stop typing indicator
+            socket.emit('typing_stop', { pin: currentPin });
+            isTyping = false;
+        }
+
+        function addMessage(text, sender, timestamp, type, messageId) {
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            messageEl.setAttribute('data-message-id', messageId);
+            
+            messageEl.innerHTML = `
+                <div class="message-text">${text}</div>
+                <div class="message-actions">
+                    <button class="reaction-btn" data-reaction="👍">👍</button>
+                    <button class="reaction-btn" data-reaction="❤️">❤️</button>
+                    <button class="reaction-btn" data-reaction="😂">😂</button>
+                    <button class="reaction-btn" data-reaction="😮">😮</button>
+                </div>
+                <div class="reactions-container" id="reactions-${messageId}"></div>
+                <div class="message-time">${timestamp}</div>
+            `;
+            
+            // Add event listeners to reaction buttons
+            const reactionBtns = messageEl.querySelectorAll('.reaction-btn');
+            reactionBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const reaction = this.getAttribute('data-reaction');
+                    socket.emit('message_reaction', {
+                        pin: currentPin,
+                        messageId: messageId,
+                        reaction: reaction
+                    });
+                });
+            });
+            
+            chatContainer.appendChild(messageEl);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function updateMessageReaction(messageId, reaction) {
+            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (!messageEl) return;
+            
+            const reactionsContainer = messageEl.querySelector('.reactions-container');
+            const existingReaction = reactionsContainer.querySelector(`[data-reaction="${reaction}"]`);
+            
+            if (existingReaction) {
+                const countEl = existingReaction.querySelector('.reaction-count');
+                const count = parseInt(countEl.textContent) + 1;
+                countEl.textContent = count;
+            } else {
+                const reactionEl = document.createElement('div');
+                reactionEl.className = 'reaction';
+                reactionEl.setAttribute('data-reaction', reaction);
+                reactionEl.innerHTML = `
+                    <span>${reaction}</span>
+                    <span class="reaction-count">1</span>
+                `;
+                reactionsContainer.appendChild(reactionEl);
+            }
+        }
+
+        function addSystemMessage(text) {
+            const messageEl = document.createElement('div');
+            messageEl.className = 'message received';
+            messageEl.style.alignSelf = 'center';
+            messageEl.style.backgroundColor = 'transparent';
+            messageEl.style.border = 'none';
+            messageEl.style.fontStyle = 'italic';
+            messageEl.style.color = 'var(--gray)';
+            messageEl.style.textAlign = 'center';
+            messageEl.style.maxWidth = '100%';
+            
+            messageEl.innerHTML = `
+                <div class="message-text">${text}</div>
+            `;
+            
+            chatContainer.appendChild(messageEl);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function handleTyping() {
+            if (!isTyping) {
+                isTyping = true;
+                socket.emit('typing_start', { pin: currentPin });
+            }
+            
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                isTyping = false;
+                socket.emit('typing_stop', { pin: currentPin });
+            }, 1000);
+        }
+
+        function renderEmojiPicker() {
+            emojis.forEach(emoji => {
+                const emojiOption = document.createElement('div');
+                emojiOption.className = 'emoji-option';
+                emojiOption.textContent = emoji;
+                emojiOption.addEventListener('click', () => {
+                    insertEmoji(emoji);
+                    toggleEmojiPicker();
+                });
+                emojiPicker.appendChild(emojiOption);
+            });
+        }
+
+        function toggleEmojiPicker() {
+            emojiPicker.classList.toggle('show');
+        }
+
+        function insertEmoji(emoji) {
+            const cursorPos = messageInput.selectionStart;
+            const textBefore = messageInput.value.substring(0, cursorPos);
+            const textAfter = messageInput.value.substring(cursorPos);
+            
+            messageInput.value = textBefore + emoji + textAfter;
+            messageInput.focus();
+            messageInput.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+            
+            autoResizeTextarea(messageInput);
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        function setupMessageInput() {
+            // Close emoji picker when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+                    emojiPicker.classList.remove('show');
+                }
+            });
+        }
+
+        function generateMessageId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
