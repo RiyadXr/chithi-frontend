@@ -32,6 +32,11 @@
             --border-color: #e2e8f0;
             --message-sent: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             --message-received: white;
+            
+            /* Tick mark colors */
+            --tick-sent: #94a3b8;
+            --tick-delivered: #3b82f6;
+            --tick-seen: #10b981;
         }
 
         [data-theme="dark"] {
@@ -43,6 +48,11 @@
             --border-color: #334155;
             --message-sent: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
             --message-received: #1e293b;
+            
+            /* Tick mark colors for dark theme */
+            --tick-sent: #64748b;
+            --tick-delivered: #60a5fa;
+            --tick-seen: #34d399;
         }
 
         [data-theme="blue"] {
@@ -51,6 +61,11 @@
             --primary-dark: #0284c7;
             --primary-light: #38bdf8;
             --message-sent: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+            
+            /* Tick mark colors for blue theme */
+            --tick-sent: #94a3b8;
+            --tick-delivered: #1d4ed8;
+            --tick-seen: #10b981;
         }
 
         [data-theme="green"] {
@@ -59,6 +74,11 @@
             --primary-dark: #059669;
             --primary-light: #34d399;
             --message-sent: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            
+            /* Tick mark colors for green theme */
+            --tick-sent: #94a3b8;
+            --tick-delivered: #3b82f6;
+            --tick-seen: #dc2626;
         }
 
         * {
@@ -744,22 +764,22 @@
         /* Seen status styles */
         .message-status {
             font-size: 0.7rem;
-            opacity: 0.7;
+            opacity: 0.9;
             display: flex;
             align-items: center;
             gap: 2px;
         }
 
         .status-single-tick {
-            color: var(--text-secondary);
+            color: var(--tick-sent);
         }
 
         .status-double-tick {
-            color: var(--primary);
+            color: var(--tick-delivered);
         }
 
         .status-triple-tick {
-            color: var(--primary);
+            color: var(--tick-seen);
         }
 
         /* Reply message styles */
