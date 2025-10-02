@@ -353,6 +353,26 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+            /* Fix for scrollable chat */
+            min-height: 0;
+        }
+
+        /* Custom scrollbar for chat container */
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: var(--light-gray);
+            border-radius: 3px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: var(--gray);
         }
 
         .message {
@@ -688,6 +708,23 @@
             color: var(--text-primary);
         }
 
+        .current-pin {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 16px;
+        }
+
+        .pin-display {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 8px;
+            color: var(--primary);
+        }
+
         .theme-options {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -893,6 +930,14 @@
             </div>
             <div class="modal-body">
                 <div class="setting-section">
+                    <h3 class="setting-title">Current PIN</h3>
+                    <div class="current-pin">
+                        <i class="fas fa-key"></i>
+                        <div class="pin-display" id="currentPinDisplay">----</div>
+                    </div>
+                </div>
+                
+                <div class="setting-section">
                     <h3 class="setting-title">Theme</h3>
                     <div class="theme-options">
                         <div class="theme-option theme-purple active" data-theme="default">
@@ -946,6 +991,7 @@
         const closeSettingsBtn = document.getElementById('closeSettingsBtn');
         const themeOptions = document.querySelectorAll('.theme-option');
         const deleteRoomBtn = document.getElementById('deleteRoomBtn');
+        const currentPinDisplay = document.getElementById('currentPinDisplay');
 
         // Socket.io connection - Use your Render backend URL here
         const BACKEND_URL = 'https://chithi-backend.onrender.com';
@@ -1113,6 +1159,9 @@
             settingsBtn.classList.remove('hidden');
             connectionStatus.classList.remove('hidden');
             
+            // Update PIN display in settings
+            currentPinDisplay.textContent = currentPin;
+            
             // Join the room with the PIN and user name
             socket.emit('join_room', { 
                 pin: currentPin,
@@ -1188,6 +1237,11 @@
             });
             
             chatContainer.appendChild(messageEl);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            // Scroll to bottom of chat container
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
@@ -1230,7 +1284,7 @@
             `;
             
             chatContainer.appendChild(messageEl);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            scrollToBottom();
         }
 
         function handleTyping() {
@@ -1360,6 +1414,9 @@
             // Clear inputs
             userNameInput.value = '';
             clearPin();
+            
+            // Reset PIN display
+            currentPinDisplay.textContent = '----';
         }
 
         // Initialize the app when DOM is loaded
