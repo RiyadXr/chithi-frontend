@@ -125,7 +125,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Removed rotation animation */
         }
 
         .header-actions {
@@ -365,15 +364,6 @@
         .btn-secondary:hover {
             background-color: var(--bg-secondary);
             border-color: var(--text-secondary);
-        }
-
-        .btn-help {
-            background-color: var(--warning);
-            color: white;
-        }
-
-        .btn-help:hover {
-            background-color: #d97706;
         }
 
         /* Minimal Help Button */
@@ -744,6 +734,154 @@
         .emoji-option:hover {
             background-color: var(--bg-secondary);
             transform: scale(1.1);
+        }
+
+        /* Seen status styles */
+        .message-status {
+            font-size: 0.65rem;
+            margin-top: 2px;
+            opacity: 0.6;
+            text-align: right;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+        }
+
+        .message.sent .message-status {
+            text-align: left;
+            justify-content: flex-start;
+        }
+
+        .seen-indicator {
+            color: var(--primary);
+            font-size: 0.7rem;
+        }
+
+        /* Reply message styles */
+        .message-reply {
+            background: rgba(0, 0, 0, 0.05);
+            border-left: 3px solid var(--primary);
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .message.sent .message-reply {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .message-reply:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        .message.sent .message-reply:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .reply-sender {
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+            color: var(--primary);
+        }
+
+        .reply-text {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Reply preview in input area */
+        .reply-preview {
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--primary);
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .reply-preview-content {
+            flex: 1;
+        }
+
+        .reply-preview-sender {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--primary);
+            margin-bottom: 2px;
+        }
+
+        .reply-preview-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .cancel-reply {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .cancel-reply:hover {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        /* Message context menu */
+        .message-context-menu {
+            position: fixed;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-sm);
+            box-shadow: var(--shadow);
+            padding: 8px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .message-context-menu.show {
+            display: flex;
+        }
+
+        .context-menu-item {
+            padding: 8px 12px;
+            border: none;
+            background: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .context-menu-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .context-menu-item i {
+            font-size: 0.8rem;
+            width: 16px;
+            text-align: center;
         }
 
         /* Settings Modal */
@@ -1245,6 +1383,15 @@
             </div>
             
             <div class="input-area">
+                <div class="reply-preview hidden" id="replyPreview">
+                    <div class="reply-preview-content">
+                        <div class="reply-preview-sender">Replying to <span id="replyPreviewSender"></span></div>
+                        <div class="reply-preview-text" id="replyPreviewText"></div>
+                    </div>
+                    <button class="cancel-reply" id="cancelReplyBtn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <button class="emoji-btn" id="emojiBtn">😊</button>
                 
                 <div class="message-input-container">
@@ -1260,6 +1407,18 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="message-context-menu" id="contextMenu">
+        <button class="context-menu-item" id="contextReplyBtn">
+            <i class="fas fa-reply"></i>
+            Reply
+        </button>
+        <button class="context-menu-item" id="contextCopyBtn">
+            <i class="fas fa-copy"></i>
+            Copy Text
+        </button>
     </div>
 
     <!-- Settings Modal -->
@@ -1421,6 +1580,13 @@
         const leaveRoomBtn = document.getElementById('leaveRoomBtn');
         const currentPinDisplay = document.getElementById('currentPinDisplay');
         const userList = document.getElementById('userList');
+        const contextMenu = document.getElementById('contextMenu');
+        const contextReplyBtn = document.getElementById('contextReplyBtn');
+        const contextCopyBtn = document.getElementById('contextCopyBtn');
+        const replyPreview = document.getElementById('replyPreview');
+        const replyPreviewSender = document.getElementById('replyPreviewSender');
+        const replyPreviewText = document.getElementById('replyPreviewText');
+        const cancelReplyBtn = document.getElementById('cancelReplyBtn');
 
         // Socket.io connection - Use your Render backend URL here
         const BACKEND_URL = 'https://chithi-backend.onrender.com';
@@ -1438,6 +1604,8 @@
         let currentTheme = 'default';
         let chatHistory = [];
         let currentUsers = [];
+        let currentReply = null;
+        let messageSeenStatus = new Map();
 
         // Popular emojis for the picker
         const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
@@ -1505,6 +1673,9 @@
             closeSettingsBtn.addEventListener('click', hideSettings);
             deleteRoomBtn.addEventListener('click', deleteRoom);
             leaveRoomBtn.addEventListener('click', leaveRoom);
+            cancelReplyBtn.addEventListener('click', cancelReply);
+            contextReplyBtn.addEventListener('click', handleContextReply);
+            contextCopyBtn.addEventListener('click', handleContextCopy);
             
             // Theme selection
             themeOptions.forEach(option => {
@@ -1542,6 +1713,13 @@
                 });
             });
 
+            // Close context menu when clicking elsewhere
+            document.addEventListener('click', (e) => {
+                if (!contextMenu.contains(e.target)) {
+                    contextMenu.classList.remove('show');
+                }
+            });
+
             // Socket event handlers
             socket.on('connect', handleSocketConnect);
             socket.on('disconnect', handleSocketDisconnect);
@@ -1556,6 +1734,7 @@
             socket.on('room_deleted', handleRoomDeleted);
             socket.on('user_count_update', handleUserCountUpdate);
             socket.on('current_users', handleCurrentUsers);
+            socket.on('message_seen_update', handleMessageSeenUpdate);
         }
 
         // Socket event handlers
@@ -1589,8 +1768,14 @@
         }
 
         function handleNewMessage(data) {
-            addMessage(data.message, data.sender, data.timestamp, 'received', data.messageId);
-            saveMessageToHistory(data.message, data.sender, data.timestamp, 'received', data.messageId);
+            addMessage(data.message, data.sender, data.timestamp, 'received', data.messageId, data.replyTo);
+            saveMessageToHistory(data.message, data.sender, data.timestamp, 'received', data.messageId, data.replyTo);
+            
+            // Mark message as seen
+            socket.emit('message_seen', {
+                pin: currentPin,
+                messageId: data.messageId
+            });
         }
 
         function handleTypingStart(data) {
@@ -1632,6 +1817,13 @@
         function handleCurrentUsers(data) {
             currentUsers = data.users;
             updateUserList();
+        }
+
+        function handleMessageSeenUpdate(data) {
+            data.messages.forEach(msg => {
+                messageSeenStatus.set(msg.messageId, msg.seenBy);
+                updateMessageSeenStatus(msg.messageId, msg.seenBy);
+            });
         }
 
         function updateUserList() {
@@ -1730,23 +1922,30 @@
             const messageId = generateMessageId();
             
             // Add message to UI
-            addMessage(message, currentUserName, timestamp, 'sent', messageId);
+            addMessage(message, currentUserName, timestamp, 'sent', messageId, currentReply);
             
             // Save message to history
-            saveMessageToHistory(message, currentUserName, timestamp, 'sent', messageId);
+            saveMessageToHistory(message, currentUserName, timestamp, 'sent', messageId, currentReply);
             
             // Send message via socket
-            socket.emit('send_message', {
+            const messageData = {
                 pin: currentPin,
                 message: message,
                 timestamp: timestamp,
                 messageId: messageId,
                 sender: currentUserName
-            });
+            };
             
-            // Clear input
+            if (currentReply) {
+                messageData.replyTo = currentReply;
+            }
+            
+            socket.emit('send_message', messageData);
+            
+            // Clear input and reply
             messageInput.value = '';
             autoResizeTextarea(messageInput);
+            cancelReply();
             
             // Stop typing indicator
             socket.emit('typing_stop', { 
@@ -1756,12 +1955,42 @@
             isTyping = false;
         }
 
-        function addMessage(text, sender, timestamp, type, messageId) {
+        function addMessage(text, sender, timestamp, type, messageId, replyTo = null) {
             const messageEl = document.createElement('div');
             messageEl.className = `message ${type}`;
             messageEl.setAttribute('data-message-id', messageId);
             
-            messageEl.innerHTML = `
+            // Add context menu on right-click/long press
+            messageEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showContextMenu(e, messageId);
+            });
+            
+            // Add long press on touch devices
+            let pressTimer;
+            messageEl.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(() => {
+                    showContextMenu(e.touches[0], messageId);
+                }, 500);
+            });
+            
+            messageEl.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+            
+            let messageContent = '';
+            
+            // Add reply preview if this is a reply
+            if (replyTo) {
+                messageContent += `
+                    <div class="message-reply" data-original-message-id="${replyTo.messageId}">
+                        <div class="reply-sender">${replyTo.sender}</div>
+                        <div class="reply-text">${replyTo.text}</div>
+                    </div>
+                `;
+            }
+            
+            messageContent += `
                 <div class="message-header">
                     <span class="message-sender">${sender}</span>
                 </div>
@@ -1776,6 +2005,8 @@
                 <div class="reactions-container" id="reactions-${messageId}"></div>
             `;
             
+            messageEl.innerHTML = messageContent;
+            
             // Add event listeners to reaction buttons
             const reactionBtns = messageEl.querySelectorAll('.reaction-btn');
             reactionBtns.forEach(btn => {
@@ -1789,13 +2020,42 @@
                 });
             });
             
+            // Add click event to reply preview to scroll to original message
+            const replyElement = messageEl.querySelector('.message-reply');
+            if (replyElement) {
+                replyElement.addEventListener('click', function() {
+                    const originalMessageId = this.getAttribute('data-original-message-id');
+                    const originalMessage = document.querySelector(`[data-message-id="${originalMessageId}"]`);
+                    if (originalMessage) {
+                        originalMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        originalMessage.style.backgroundColor = 'rgba(124, 58, 237, 0.1)';
+                        setTimeout(() => {
+                            originalMessage.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                });
+            }
+            
             chatContainer.appendChild(messageEl);
             scrollToBottom();
+            
+            // Mark message as seen if it's received
+            if (type === 'received') {
+                socket.emit('message_seen', {
+                    pin: currentPin,
+                    messageId: messageId
+                });
+            }
+            
+            // Update seen status if available
+            if (messageSeenStatus.has(messageId)) {
+                updateMessageSeenStatus(messageId, messageSeenStatus.get(messageId));
+            }
         }
 
-        function saveMessageToHistory(text, sender, timestamp, type, messageId) {
+        function saveMessageToHistory(text, sender, timestamp, type, messageId, replyTo = null) {
             chatHistory.push({
-                text, sender, timestamp, type, messageId
+                text, sender, timestamp, type, messageId, replyTo
             });
             
             // Save to localStorage (limit to 100 messages to prevent storage issues)
@@ -1816,7 +2076,7 @@
             
             // Add all messages from history
             chatHistory.forEach(msg => {
-                addMessage(msg.text, msg.sender, msg.timestamp, msg.type, msg.messageId);
+                addMessage(msg.text, msg.sender, msg.timestamp, msg.type, msg.messageId, msg.replyTo);
             });
         }
 
@@ -1845,6 +2105,33 @@
                     <span class="reaction-count">1</span>
                 `;
                 reactionsContainer.appendChild(reactionEl);
+            }
+        }
+
+        function updateMessageSeenStatus(messageId, seenBy) {
+            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageEl) {
+                let statusElement = messageEl.querySelector('.message-status');
+                if (!statusElement) {
+                    statusElement = document.createElement('div');
+                    statusElement.className = 'message-status';
+                    messageEl.appendChild(statusElement);
+                }
+                
+                // Remove current user from seen count
+                const otherUsers = seenBy.filter(user => user !== currentUserName);
+                
+                if (otherUsers.length > 0) {
+                    statusElement.innerHTML = `
+                        <span>Seen by ${otherUsers.length} user${otherUsers.length > 1 ? 's' : ''}</span>
+                        <i class="fas fa-check-double seen-indicator"></i>
+                    `;
+                } else {
+                    statusElement.innerHTML = `
+                        <span>Delivered</span>
+                        <i class="fas fa-check seen-indicator"></i>
+                    `;
+                }
             }
         }
 
@@ -2029,6 +2316,58 @@
             // Reset current state
             currentPin = '';
             currentUserName = '';
+            currentReply = null;
+            replyPreview.classList.add('hidden');
+        }
+
+        // Context menu function
+        function showContextMenu(event, messageId) {
+            contextMenu.setAttribute('data-message-id', messageId);
+            contextMenu.style.left = event.clientX + 'px';
+            contextMenu.style.top = event.clientY + 'px';
+            contextMenu.classList.add('show');
+        }
+
+        function handleContextReply() {
+            const messageId = contextMenu.getAttribute('data-message-id');
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                const sender = messageElement.querySelector('.message-sender').textContent;
+                const text = messageElement.querySelector('.message-text').textContent;
+                
+                setCurrentReply({
+                    messageId: messageId,
+                    sender: sender,
+                    text: text
+                });
+            }
+            contextMenu.classList.remove('show');
+        }
+
+        function handleContextCopy() {
+            const messageId = contextMenu.getAttribute('data-message-id');
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                const text = messageElement.querySelector('.message-text').textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    // Optional: Show copied notification
+                });
+            }
+            contextMenu.classList.remove('show');
+        }
+
+        function setCurrentReply(reply) {
+            currentReply = reply;
+            replyPreviewSender.textContent = reply.sender;
+            replyPreviewText.textContent = 
+                reply.text.length > 50 ? reply.text.substring(0, 50) + '...' : reply.text;
+            replyPreview.classList.remove('hidden');
+            messageInput.focus();
+        }
+
+        function cancelReply() {
+            currentReply = null;
+            replyPreview.classList.add('hidden');
         }
 
         // Initialize the app when DOM is loaded
