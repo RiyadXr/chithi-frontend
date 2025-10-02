@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chithi - Modern Secure Chat</title>
+    <title>চিঠি - Modern Secure Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -460,8 +460,8 @@
         .message-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 4px;
-            font-size: 0.8rem;
+            margin-bottom: 2px;
+            font-size: 0.75rem;
         }
 
         .message-sender {
@@ -470,7 +470,14 @@
         }
 
         .message-time {
-            opacity: 0.7;
+            opacity: 0.6;
+            font-size: 0.65rem;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message.sent .message-time {
+            text-align: left;
         }
 
         .message-text {
@@ -613,27 +620,6 @@
         .message-input:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
-        }
-
-        .send-btn {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: var(--transition);
-            box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
-            flex-shrink: 0;
-        }
-
-        .send-btn:hover {
-            background-color: var(--primary-dark);
-            transform: scale(1.05);
         }
 
         .emoji-picker {
@@ -781,6 +767,109 @@
             color: var(--primary);
         }
 
+        .current-users {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-sm);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .developer-info {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-sm);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .developer-text {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .developer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .developer-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: var(--border-radius-sm);
+            background: var(--bg-primary);
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+        }
+
+        .developer-link:hover {
+            background: var(--bg-secondary);
+            transform: translateY(-2px);
+        }
+
+        .link-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .link-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .website-banner {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
         .theme-options {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -913,7 +1002,7 @@
         <div class="header">
             <div class="logo">
                 <i class="fas fa-paper-plane"></i>
-                <span>Chithi</span>
+                <span>চিঠি</span>
             </div>
             <div class="header-actions">
                 <div class="status offline" id="status">
@@ -935,7 +1024,7 @@
         <!-- Welcome Screen -->
         <div id="welcomeScreen" class="welcome-screen">
             <i class="fas fa-comments welcome-icon"></i>
-            <h1 class="welcome-title">Welcome to Chithi</h1>
+            <h1 class="welcome-title">Welcome to চিঠি</h1>
             <p class="welcome-subtitle">Create a PIN and share it with your contact to start a secure, private chat. No registration required.</p>
             <button class="btn btn-primary" id="startChatBtn">
                 <i class="fas fa-comment-dots"></i>
@@ -989,10 +1078,10 @@
                     <!-- Messages will appear here -->
                     <div class="message received">
                         <div class="message-header">
-                            <span class="message-sender">Chithi</span>
-                            <span class="message-time">12:00 PM</span>
+                            <span class="message-sender">চিঠি</span>
                         </div>
-                        <div class="message-text">Welcome to Chithi! Your messages are secure and private. 😊</div>
+                        <div class="message-text">Welcome to চিঠি! Your messages are secure and private. 😊</div>
+                        <div class="message-time">12:00 PM</div>
                     </div>
                 </div>
                 
@@ -1043,6 +1132,15 @@
                 </div>
                 
                 <div class="setting-section">
+                    <h3 class="setting-title">Current Users</h3>
+                    <div class="current-users">
+                        <div class="user-list" id="userList">
+                            <!-- Users will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-section">
                     <h3 class="setting-title">Theme</h3>
                     <div class="theme-options">
                         <div class="theme-option theme-purple active" data-theme="default">
@@ -1056,6 +1154,36 @@
                         </div>
                         <div class="theme-option theme-green" data-theme="green">
                             Green
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-section">
+                    <h3 class="setting-title">Developer Info</h3>
+                    <div class="developer-info">
+                        <p class="developer-text">
+                            I'm Rakibul Islam Riyad, a Textile Engineering student at NITER and the founder of RiVista Labs. I created <strong>Chithi-চিঠি</strong>, an end-to-end encrypted chat app built for private, meaningful conversations. I love turning ideas into real projects, learning as I go, and crafting tools that are simple, secure, and made with care. Everything I build is a step toward better, smarter, and more thoughtful digital experiences.
+                        </p>
+                        <div class="developer-links">
+                            <a href="https://www.facebook.com/rakibul.islam.riyad.xr7" target="_blank" class="developer-link">
+                                <div class="link-icon">
+                                    <i class="fab fa-facebook-f"></i>
+                                </div>
+                                <div class="link-text">Facebook</div>
+                            </a>
+                            <a href="mailto:hdriyad78@gmail.com" class="developer-link">
+                                <div class="link-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="link-text">hdriyad78@gmail.com</div>
+                            </a>
+                            <a href="https://rivista.netlify.app/" target="_blank" class="developer-link">
+                                <div class="link-icon">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                                <div class="link-text">R!Vista</div>
+                                <div class="website-banner">NEW</div>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -1105,6 +1233,7 @@
         const deleteRoomBtn = document.getElementById('deleteRoomBtn');
         const leaveRoomBtn = document.getElementById('leaveRoomBtn');
         const currentPinDisplay = document.getElementById('currentPinDisplay');
+        const userList = document.getElementById('userList');
 
         // Socket.io connection - Use your Render backend URL here
         const BACKEND_URL = 'https://chithi-backend.onrender.com';
@@ -1121,6 +1250,7 @@
         let typingTimer;
         let currentTheme = 'default';
         let chatHistory = [];
+        let currentUsers = [];
 
         // Popular emojis for the picker
         const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
@@ -1234,6 +1364,7 @@
             socket.on('theme_changed', handleThemeChanged);
             socket.on('room_deleted', handleRoomDeleted);
             socket.on('user_count_update', handleUserCountUpdate);
+            socket.on('current_users', handleCurrentUsers);
         }
 
         // Socket event handlers
@@ -1305,6 +1436,30 @@
             } else {
                 userCount.classList.add('hidden');
             }
+        }
+
+        function handleCurrentUsers(data) {
+            currentUsers = data.users;
+            updateUserList();
+        }
+
+        function updateUserList() {
+            userList.innerHTML = '';
+            
+            currentUsers.forEach(user => {
+                const userItem = document.createElement('div');
+                userItem.className = 'user-item';
+                
+                // Get first letter for avatar
+                const firstLetter = user.userName.charAt(0).toUpperCase();
+                
+                userItem.innerHTML = `
+                    <div class="user-avatar">${firstLetter}</div>
+                    <div class="user-name">${user.userName}</div>
+                `;
+                
+                userList.appendChild(userItem);
+            });
         }
 
         // UI Functions
@@ -1410,9 +1565,9 @@
             messageEl.innerHTML = `
                 <div class="message-header">
                     <span class="message-sender">${sender}</span>
-                    <span class="message-time">${timestamp}</span>
                 </div>
                 <div class="message-text">${text}</div>
+                <div class="message-time">${timestamp}</div>
                 <div class="message-actions">
                     <button class="reaction-btn" data-reaction="👍">👍</button>
                     <button class="reaction-btn" data-reaction="❤️">❤️</button>
@@ -1581,6 +1736,8 @@
 
         function showSettings() {
             settingsModal.classList.add('active');
+            // Request current users when settings is opened
+            socket.emit('get_current_users', { pin: currentPin });
         }
 
         function hideSettings() {
