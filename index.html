@@ -499,10 +499,15 @@
             font-size: 0.65rem;
             margin-top: 4px;
             text-align: right;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
         }
 
         .message.sent .message-time {
             text-align: left;
+            justify-content: flex-start;
         }
 
         .message-text {
@@ -738,24 +743,23 @@
 
         /* Seen status styles */
         .message-status {
-            font-size: 0.65rem;
-            margin-top: 2px;
-            opacity: 0.6;
-            text-align: right;
+            font-size: 0.7rem;
+            opacity: 0.7;
             display: flex;
             align-items: center;
-            justify-content: flex-end;
-            gap: 4px;
+            gap: 2px;
         }
 
-        .message.sent .message-status {
-            text-align: left;
-            justify-content: flex-start;
+        .status-single-tick {
+            color: var(--text-secondary);
         }
 
-        .seen-indicator {
+        .status-double-tick {
             color: var(--primary);
-            font-size: 0.7rem;
+        }
+
+        .status-triple-tick {
+            color: var(--primary);
         }
 
         /* Reply message styles */
@@ -1415,6 +1419,10 @@
             <i class="fas fa-reply"></i>
             Reply
         </button>
+        <button class="context-menu-item" id="contextUnsendBtn">
+            <i class="fas fa-trash"></i>
+            Unsend
+        </button>
         <button class="context-menu-item" id="contextCopyBtn">
             <i class="fas fa-copy"></i>
             Copy Text
@@ -1582,6 +1590,7 @@
         const userList = document.getElementById('userList');
         const contextMenu = document.getElementById('contextMenu');
         const contextReplyBtn = document.getElementById('contextReplyBtn');
+        const contextUnsendBtn = document.getElementById('contextUnsendBtn');
         const contextCopyBtn = document.getElementById('contextCopyBtn');
         const replyPreview = document.getElementById('replyPreview');
         const replyPreviewSender = document.getElementById('replyPreviewSender');
@@ -1605,7 +1614,7 @@
         let chatHistory = [];
         let currentUsers = [];
         let currentReply = null;
-        let messageSeenStatus = new Map();
+        let messageStatus = new Map();
 
         // Popular emojis for the picker
         const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
@@ -1675,6 +1684,7 @@
             leaveRoomBtn.addEventListener('click', leaveRoom);
             cancelReplyBtn.addEventListener('click', cancelReply);
             contextReplyBtn.addEventListener('click', handleContextReply);
+            contextUnsendBtn.addEventListener('click', handleContextUnsend);
             contextCopyBtn.addEventListener('click', handleContextCopy);
             
             // Theme selection
@@ -1734,7 +1744,8 @@
             socket.on('room_deleted', handleRoomDeleted);
             socket.on('user_count_update', handleUserCountUpdate);
             socket.on('current_users', handleCurrentUsers);
-            socket.on('message_seen_update', handleMessageSeenUpdate);
+            socket.on('message_status_update', handleMessageStatusUpdate);
+            socket.on('message_unsent', handleMessageUnsent);
         }
 
         // Socket event handlers
@@ -1771,8 +1782,8 @@
             addMessage(data.message, data.sender, data.timestamp, 'received', data.messageId, data.replyTo);
             saveMessageToHistory(data.message, data.sender, data.timestamp, 'received', data.messageId, data.replyTo);
             
-            // Mark message as seen
-            socket.emit('message_seen', {
+            // Update message status for sender
+            socket.emit('message_delivered', {
                 pin: currentPin,
                 messageId: data.messageId
             });
@@ -1819,11 +1830,20 @@
             updateUserList();
         }
 
-        function handleMessageSeenUpdate(data) {
-            data.messages.forEach(msg => {
-                messageSeenStatus.set(msg.messageId, msg.seenBy);
-                updateMessageSeenStatus(msg.messageId, msg.seenBy);
-            });
+        function handleMessageStatusUpdate(data) {
+            messageStatus.set(data.messageId, data.status);
+            updateMessageStatus(data.messageId, data.status);
+        }
+
+        function handleMessageUnsent(data) {
+            const messageElement = document.querySelector(`[data-message-id="${data.messageId}"]`);
+            if (messageElement) {
+                messageElement.remove();
+                
+                // Remove from chat history
+                chatHistory = chatHistory.filter(msg => msg.messageId !== data.messageId);
+                localStorage.setItem(`chithi-history-${currentPin}`, JSON.stringify(chatHistory));
+            }
         }
 
         function updateUserList() {
@@ -1942,6 +1962,10 @@
             
             socket.emit('send_message', messageData);
             
+            // Set initial status as sent (single tick)
+            messageStatus.set(messageId, 'sent');
+            updateMessageStatus(messageId, 'sent');
+            
             // Clear input and reply
             messageInput.value = '';
             autoResizeTextarea(messageInput);
@@ -1963,14 +1987,14 @@
             // Add context menu on right-click/long press
             messageEl.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
-                showContextMenu(e, messageId);
+                showContextMenu(e, messageId, sender === currentUserName);
             });
             
             // Add long press on touch devices
             let pressTimer;
             messageEl.addEventListener('touchstart', (e) => {
                 pressTimer = setTimeout(() => {
-                    showContextMenu(e.touches[0], messageId);
+                    showContextMenu(e.touches[0], messageId, sender === currentUserName);
                 }, 500);
             });
             
@@ -1995,7 +2019,10 @@
                     <span class="message-sender">${sender}</span>
                 </div>
                 <div class="message-text">${text}</div>
-                <div class="message-time">${timestamp}</div>
+                <div class="message-time">
+                    ${timestamp}
+                    ${type === 'sent' ? '<div class="message-status status-single-tick"><i class="fas fa-check"></i></div>' : ''}
+                </div>
                 <div class="message-actions">
                     <button class="reaction-btn" data-reaction="👍">👍</button>
                     <button class="reaction-btn" data-reaction="❤️">❤️</button>
@@ -2039,17 +2066,9 @@
             chatContainer.appendChild(messageEl);
             scrollToBottom();
             
-            // Mark message as seen if it's received
-            if (type === 'received') {
-                socket.emit('message_seen', {
-                    pin: currentPin,
-                    messageId: messageId
-                });
-            }
-            
-            // Update seen status if available
-            if (messageSeenStatus.has(messageId)) {
-                updateMessageSeenStatus(messageId, messageSeenStatus.get(messageId));
+            // Update status if available
+            if (messageStatus.has(messageId)) {
+                updateMessageStatus(messageId, messageStatus.get(messageId));
             }
         }
 
@@ -2108,29 +2127,21 @@
             }
         }
 
-        function updateMessageSeenStatus(messageId, seenBy) {
+        function updateMessageStatus(messageId, status) {
             const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
             if (messageEl) {
-                let statusElement = messageEl.querySelector('.message-status');
-                if (!statusElement) {
-                    statusElement = document.createElement('div');
-                    statusElement.className = 'message-status';
-                    messageEl.appendChild(statusElement);
-                }
-                
-                // Remove current user from seen count
-                const otherUsers = seenBy.filter(user => user !== currentUserName);
-                
-                if (otherUsers.length > 0) {
-                    statusElement.innerHTML = `
-                        <span>Seen by ${otherUsers.length} user${otherUsers.length > 1 ? 's' : ''}</span>
-                        <i class="fas fa-check-double seen-indicator"></i>
-                    `;
-                } else {
-                    statusElement.innerHTML = `
-                        <span>Delivered</span>
-                        <i class="fas fa-check seen-indicator"></i>
-                    `;
+                const statusElement = messageEl.querySelector('.message-status');
+                if (statusElement) {
+                    if (status === 'sent') {
+                        statusElement.className = 'message-status status-single-tick';
+                        statusElement.innerHTML = '<i class="fas fa-check"></i>';
+                    } else if (status === 'delivered') {
+                        statusElement.className = 'message-status status-double-tick';
+                        statusElement.innerHTML = '<i class="fas fa-check"></i><i class="fas fa-check"></i>';
+                    } else if (status === 'seen') {
+                        statusElement.className = 'message-status status-triple-tick';
+                        statusElement.innerHTML = '<i class="fas fa-check"></i><i class="fas fa-check"></i><i class="fas fa-check"></i>';
+                    }
                 }
             }
         }
@@ -2321,8 +2332,12 @@
         }
 
         // Context menu function
-        function showContextMenu(event, messageId) {
+        function showContextMenu(event, messageId, isOwnMessage) {
             contextMenu.setAttribute('data-message-id', messageId);
+            
+            // Show/hide unsend option based on ownership
+            contextUnsendBtn.style.display = isOwnMessage ? 'flex' : 'none';
+            
             contextMenu.style.left = event.clientX + 'px';
             contextMenu.style.top = event.clientY + 'px';
             contextMenu.classList.add('show');
@@ -2340,6 +2355,27 @@
                     sender: sender,
                     text: text
                 });
+            }
+            contextMenu.classList.remove('show');
+        }
+
+        function handleContextUnsend() {
+            const messageId = contextMenu.getAttribute('data-message-id');
+            if (confirm('Are you sure you want to unsend this message? This cannot be undone.')) {
+                socket.emit('unsend_message', {
+                    pin: currentPin,
+                    messageId: messageId
+                });
+                
+                // Remove from UI immediately
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    messageElement.remove();
+                }
+                
+                // Remove from chat history
+                chatHistory = chatHistory.filter(msg => msg.messageId !== messageId);
+                localStorage.setItem(`chithi-history-${currentPin}`, JSON.stringify(chatHistory));
             }
             contextMenu.classList.remove('show');
         }
