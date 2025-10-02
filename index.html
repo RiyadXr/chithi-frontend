@@ -134,28 +134,51 @@
         }
 
         .status {
-            font-size: 0.85rem;
             display: flex;
             align-items: center;
             gap: 6px;
+        }
+
+        .status-icon {
+            font-size: 0.7rem;
+            transition: var(--transition);
+        }
+
+        .status.online .status-icon {
+            color: #10b981;
+            text-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        .status.offline .status-icon {
+            color: #ef4444;
+        }
+
+        .status.connecting .status-icon {
+            color: #f59e0b;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+        .user-count {
             background: rgba(255, 255, 255, 0.15);
-            padding: 6px 12px;
-            border-radius: 20px;
-        }
-
-        .status.online {
-            color: #bbf7d0;
-        }
-
-        .status.offline {
-            color: #fecaca;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .icon-btn {
             background: rgba(255, 255, 255, 0.15);
             border: none;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -814,6 +837,18 @@
             background-color: #dc2626;
         }
 
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+            width: 100%;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .btn-warning:hover {
+            background-color: #d97706;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -882,9 +917,15 @@
             </div>
             <div class="header-actions">
                 <div class="status offline" id="status">
-                    <i class="fas fa-circle"></i>
-                    <span>Disconnected</span>
+                    <i class="fas fa-circle status-icon"></i>
+                    <div class="user-count hidden" id="userCount">
+                        <i class="fas fa-user"></i>
+                        <span id="userCountText">1</span>
+                    </div>
                 </div>
+                <button class="icon-btn hidden" id="leaveChatBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
                 <button class="icon-btn hidden" id="settingsBtn">
                     <i class="fas fa-cog"></i>
                 </button>
@@ -1021,9 +1062,13 @@
                 
                 <div class="setting-section">
                     <h3 class="setting-title">Room Management</h3>
+                    <button class="btn btn-warning" id="leaveRoomBtn">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Leave Chat Room
+                    </button>
                     <button class="btn btn-danger" id="deleteRoomBtn">
                         <i class="fas fa-trash"></i>
-                        Delete Room & Reset Chat
+                        Delete Room & Clear History
                     </button>
                 </div>
             </div>
@@ -1045,21 +1090,29 @@
         const messageInput = document.getElementById('messageInput');
         const sendBtn = document.getElementById('sendBtn');
         const status = document.getElementById('status');
+        const userCount = document.getElementById('userCount');
+        const userCountText = document.getElementById('userCountText');
         const connectionStatus = document.getElementById('connectionStatus');
         const typingIndicator = document.getElementById('typingIndicator');
         const typingUser = document.getElementById('typingUser');
         const emojiBtn = document.getElementById('emojiBtn');
         const emojiPicker = document.getElementById('emojiPicker');
         const settingsBtn = document.getElementById('settingsBtn');
+        const leaveChatBtn = document.getElementById('leaveChatBtn');
         const settingsModal = document.getElementById('settingsModal');
         const closeSettingsBtn = document.getElementById('closeSettingsBtn');
         const themeOptions = document.querySelectorAll('.theme-option');
         const deleteRoomBtn = document.getElementById('deleteRoomBtn');
+        const leaveRoomBtn = document.getElementById('leaveRoomBtn');
         const currentPinDisplay = document.getElementById('currentPinDisplay');
 
         // Socket.io connection - Use your Render backend URL here
         const BACKEND_URL = 'https://chithi-backend.onrender.com';
-        const socket = io(BACKEND_URL);
+        const socket = io(BACKEND_URL, {
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
 
         // App state
         let currentPin = '';
@@ -1067,6 +1120,7 @@
         let isTyping = false;
         let typingTimer;
         let currentTheme = 'default';
+        let chatHistory = [];
 
         // Popular emojis for the picker
         const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
@@ -1077,6 +1131,46 @@
             renderEmojiPicker();
             setupMessageInput();
             loadTheme();
+            checkForExistingSession();
+        }
+
+        // Check if user was already in a chat session
+        function checkForExistingSession() {
+            const savedPin = localStorage.getItem('chithi-pin');
+            const savedUsername = localStorage.getItem('chithi-username');
+            const savedHistory = localStorage.getItem(`chithi-history-${savedPin}`);
+            
+            if (savedPin && savedUsername) {
+                // Auto-join the previous chat
+                currentPin = savedPin;
+                currentUserName = savedUsername;
+                
+                // Load chat history if available
+                if (savedHistory) {
+                    chatHistory = JSON.parse(savedHistory);
+                    renderChatHistory();
+                }
+                
+                // Show chat screen and join room
+                welcomeScreen.classList.add('hidden');
+                joinScreen.classList.add('hidden');
+                chatScreen.classList.remove('hidden');
+                settingsBtn.classList.remove('hidden');
+                leaveChatBtn.classList.remove('hidden');
+                connectionStatus.classList.remove('hidden');
+                
+                // Update PIN display
+                currentPinDisplay.textContent = currentPin;
+                
+                // Join the room
+                socket.emit('join_room', { 
+                    pin: currentPin,
+                    userName: currentUserName
+                });
+                
+                // Focus on message input
+                messageInput.focus();
+            }
         }
 
         // Set up all event listeners
@@ -1087,8 +1181,10 @@
             sendBtn.addEventListener('click', sendMessage);
             emojiBtn.addEventListener('click', toggleEmojiPicker);
             settingsBtn.addEventListener('click', showSettings);
+            leaveChatBtn.addEventListener('click', showLeaveConfirm);
             closeSettingsBtn.addEventListener('click', hideSettings);
             deleteRoomBtn.addEventListener('click', deleteRoom);
+            leaveRoomBtn.addEventListener('click', leaveRoom);
             
             // Theme selection
             themeOptions.forEach(option => {
@@ -1128,6 +1224,7 @@
             // Socket event handlers
             socket.on('connect', handleSocketConnect);
             socket.on('disconnect', handleSocketDisconnect);
+            socket.on('reconnecting', handleSocketReconnecting);
             socket.on('user_joined', handleUserJoined);
             socket.on('user_left', handleUserLeft);
             socket.on('message', handleNewMessage);
@@ -1136,17 +1233,28 @@
             socket.on('message_reaction', handleMessageReaction);
             socket.on('theme_changed', handleThemeChanged);
             socket.on('room_deleted', handleRoomDeleted);
+            socket.on('user_count_update', handleUserCountUpdate);
         }
 
         // Socket event handlers
         function handleSocketConnect() {
-            status.innerHTML = '<i class="fas fa-circle"></i><span>Connected</span>';
             status.className = 'status online';
+            
+            // Rejoin room if we were in one
+            if (currentPin && currentUserName) {
+                socket.emit('join_room', { 
+                    pin: currentPin,
+                    userName: currentUserName
+                });
+            }
         }
 
         function handleSocketDisconnect() {
-            status.innerHTML = '<i class="fas fa-circle"></i><span>Disconnected</span>';
             status.className = 'status offline';
+        }
+
+        function handleSocketReconnecting() {
+            status.className = 'status connecting';
         }
 
         function handleUserJoined(data) {
@@ -1160,6 +1268,7 @@
 
         function handleNewMessage(data) {
             addMessage(data.message, data.sender, data.timestamp, 'received', data.messageId);
+            saveMessageToHistory(data.message, data.sender, data.timestamp, 'received', data.messageId);
         }
 
         function handleTypingStart(data) {
@@ -1180,11 +1289,22 @@
         }
 
         function handleRoomDeleted() {
-            addSystemMessage('Room has been deleted. Chat will reset when all users leave.');
+            addSystemMessage('Room has been deleted. Chat history will be cleared.');
+            // Clear local storage for this room
+            localStorage.removeItem(`chithi-history-${currentPin}`);
             // Reset the UI after a delay
             setTimeout(() => {
                 resetChat();
             }, 3000);
+        }
+
+        function handleUserCountUpdate(data) {
+            userCountText.textContent = data.count;
+            if (data.count > 1) {
+                userCount.classList.remove('hidden');
+            } else {
+                userCount.classList.add('hidden');
+            }
         }
 
         // UI Functions
@@ -1218,9 +1338,21 @@
                 return;
             }
             
+            // Save user session
+            localStorage.setItem('chithi-pin', currentPin);
+            localStorage.setItem('chithi-username', currentUserName);
+            
+            // Load existing chat history if available
+            const savedHistory = localStorage.getItem(`chithi-history-${currentPin}`);
+            if (savedHistory) {
+                chatHistory = JSON.parse(savedHistory);
+                renderChatHistory();
+            }
+            
             joinScreen.classList.add('hidden');
             chatScreen.classList.remove('hidden');
             settingsBtn.classList.remove('hidden');
+            leaveChatBtn.classList.remove('hidden');
             connectionStatus.classList.remove('hidden');
             
             // Update PIN display in settings
@@ -1245,6 +1377,9 @@
             
             // Add message to UI
             addMessage(message, currentUserName, timestamp, 'sent', messageId);
+            
+            // Save message to history
+            saveMessageToHistory(message, currentUserName, timestamp, 'sent', messageId);
             
             // Send message via socket
             socket.emit('send_message', {
@@ -1302,6 +1437,33 @@
             
             chatContainer.appendChild(messageEl);
             scrollToBottom();
+        }
+
+        function saveMessageToHistory(text, sender, timestamp, type, messageId) {
+            chatHistory.push({
+                text, sender, timestamp, type, messageId
+            });
+            
+            // Save to localStorage (limit to 100 messages to prevent storage issues)
+            if (chatHistory.length > 100) {
+                chatHistory = chatHistory.slice(-100);
+            }
+            
+            localStorage.setItem(`chithi-history-${currentPin}`, JSON.stringify(chatHistory));
+        }
+
+        function renderChatHistory() {
+            // Clear current messages except the welcome message
+            const welcomeMessage = chatContainer.querySelector('.message:first-child');
+            chatContainer.innerHTML = '';
+            if (welcomeMessage) {
+                chatContainer.appendChild(welcomeMessage);
+            }
+            
+            // Add all messages from history
+            chatHistory.forEach(msg => {
+                addMessage(msg.text, msg.sender, msg.timestamp, msg.type, msg.messageId);
+            });
         }
 
         function scrollToBottom() {
@@ -1425,6 +1587,12 @@
             settingsModal.classList.remove('active');
         }
 
+        function showLeaveConfirm() {
+            if (confirm('Are you sure you want to leave this chat? You can rejoin later with the same PIN.')) {
+                leaveRoom();
+            }
+        }
+
         function changeTheme(theme, broadcast = true) {
             // Update active theme button
             themeOptions.forEach(option => {
@@ -1456,10 +1624,25 @@
         }
 
         function deleteRoom() {
-            if (confirm('Are you sure you want to delete this room? This will reset the chat for all users.')) {
+            if (confirm('Are you sure you want to delete this room? This will clear the chat history for all users.')) {
                 socket.emit('delete_room', { pin: currentPin });
+                // Clear local storage for this room
+                localStorage.removeItem(`chithi-history-${currentPin}`);
                 hideSettings();
             }
+        }
+
+        function leaveRoom() {
+            // Clear user session
+            localStorage.removeItem('chithi-pin');
+            localStorage.removeItem('chithi-username');
+            
+            // Leave the room via socket
+            socket.emit('leave_room', { pin: currentPin });
+            
+            // Reset UI
+            resetChat();
+            hideSettings();
         }
 
         function resetChat() {
@@ -1470,10 +1653,15 @@
                 chatContainer.appendChild(welcomeMessage);
             }
             
+            // Reset chat history
+            chatHistory = [];
+            
             // Reset UI state
             chatScreen.classList.add('hidden');
             joinScreen.classList.remove('hidden');
             settingsBtn.classList.add('hidden');
+            leaveChatBtn.classList.add('hidden');
+            userCount.classList.add('hidden');
             
             // Clear inputs
             userNameInput.value = '';
@@ -1481,6 +1669,10 @@
             
             // Reset PIN display
             currentPinDisplay.textContent = '----';
+            
+            // Reset current state
+            currentPin = '';
+            currentUserName = '';
         }
 
         // Initialize the app when DOM is loaded
