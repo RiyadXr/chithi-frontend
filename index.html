@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1339,7 +1340,7 @@
                 Start Chatting
             </button>
             <div class="footer">
-                Made with ❤ by Riyad
+                Made with ❤️ by Riyad
             </div>
         </div>
         
@@ -1373,7 +1374,7 @@
                 </button>
             </div>
             <div class="footer">
-                Made with ❤ by Riyad
+                Made with ❤️ by Riyad
             </div>
         </div>
         
@@ -1637,7 +1638,7 @@
         let messageStatus = new Map();
 
         // Popular emojis for the picker
-        const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶', '🎁'];
+        const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
 
         // Initialize the app
         function init() {
@@ -1652,7 +1653,7 @@
         function checkForExistingSession() {
             const savedPin = localStorage.getItem('chithi-pin');
             const savedUsername = localStorage.getItem('chithi-username');
-            const savedHistory = localStorage.getItem(chithi-history-${savedPin});
+            const savedHistory = localStorage.getItem(`chithi-history-${savedPin}`);
             
             if (savedPin && savedUsername) {
                 // Auto-join the previous chat
@@ -1790,12 +1791,12 @@
         }
 
         function handleUserJoined(data) {
-            addSystemMessage(${data.userName} joined the chat);
+            addSystemMessage(`${data.userName} joined the chat`);
             connectionStatus.classList.add('hidden');
         }
 
         function handleUserLeft(data) {
-            addSystemMessage(${data.userName} left the chat);
+            addSystemMessage(`${data.userName} left the chat`);
         }
 
         function handleNewMessage(data) {
@@ -1810,7 +1811,7 @@
         }
 
         function handleTypingStart(data) {
-            typingUser.textContent = ${data.userName} is typing;
+            typingUser.textContent = `${data.userName} is typing`;
             typingIndicator.classList.remove('hidden');
         }
 
@@ -1829,7 +1830,7 @@
         function handleRoomDeleted() {
             addSystemMessage('Room has been deleted. Chat history will be cleared.');
             // Clear local storage for this room
-            localStorage.removeItem(chithi-history-${currentPin});
+            localStorage.removeItem(`chithi-history-${currentPin}`);
             // Reset the UI after a delay
             setTimeout(() => {
                 resetChat();
@@ -1856,13 +1857,13 @@
         }
 
         function handleMessageUnsent(data) {
-            const messageElement = document.querySelector([data-message-id="${data.messageId}"]);
+            const messageElement = document.querySelector(`[data-message-id="${data.messageId}"]`);
             if (messageElement) {
                 messageElement.remove();
                 
                 // Remove from chat history
                 chatHistory = chatHistory.filter(msg => msg.messageId !== data.messageId);
-                localStorage.setItem(chithi-history-${currentPin}, JSON.stringify(chatHistory));
+                localStorage.setItem(`chithi-history-${currentPin}`, JSON.stringify(chatHistory));
             }
         }
 
@@ -1929,7 +1930,7 @@
             localStorage.setItem('chithi-username', currentUserName);
             
             // Load existing chat history if available
-            const savedHistory = localStorage.getItem(chithi-history-${currentPin});
+            const savedHistory = localStorage.getItem(`chithi-history-${currentPin}`);
             if (savedHistory) {
                 chatHistory = JSON.parse(savedHistory);
                 renderChatHistory();
@@ -1958,4 +1959,476 @@
             const message = messageInput.value.trim();
             if (message === '') return;
             
-            const timestamp = new Date().toLocaleTimeString([], { ho
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const messageId = generateMessageId();
+            
+            // Add message to UI
+            addMessage(message, currentUserName, timestamp, 'sent', messageId, currentReply);
+            
+            // Save message to history
+            saveMessageToHistory(message, currentUserName, timestamp, 'sent', messageId, currentReply);
+            
+            // Send message via socket
+            const messageData = {
+                pin: currentPin,
+                message: message,
+                timestamp: timestamp,
+                messageId: messageId,
+                sender: currentUserName
+            };
+            
+            if (currentReply) {
+                messageData.replyTo = currentReply;
+            }
+            
+            socket.emit('send_message', messageData);
+            
+            // Set initial status as sent (single tick)
+            messageStatus.set(messageId, 'sent');
+            updateMessageStatus(messageId, 'sent');
+            
+            // Clear input and reply
+            messageInput.value = '';
+            autoResizeTextarea(messageInput);
+            cancelReply();
+            
+            // Stop typing indicator
+            socket.emit('typing_stop', { 
+                pin: currentPin,
+                userName: currentUserName
+            });
+            isTyping = false;
+        }
+
+        function addMessage(text, sender, timestamp, type, messageId, replyTo = null) {
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            messageEl.setAttribute('data-message-id', messageId);
+            
+            // Add context menu on right-click/long press
+            messageEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showContextMenu(e, messageId, sender === currentUserName);
+            });
+            
+            // Add long press on touch devices
+            let pressTimer;
+            messageEl.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(() => {
+                    showContextMenu(e.touches[0], messageId, sender === currentUserName);
+                }, 500);
+            });
+            
+            messageEl.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+            
+            let messageContent = '';
+            
+            // Add reply preview if this is a reply
+            if (replyTo) {
+                messageContent += `
+                    <div class="message-reply" data-original-message-id="${replyTo.messageId}">
+                        <div class="reply-sender">${replyTo.sender}</div>
+                        <div class="reply-text">${replyTo.text}</div>
+                    </div>
+                `;
+            }
+            
+            messageContent += `
+                <div class="message-header">
+                    <span class="message-sender">${sender}</span>
+                </div>
+                <div class="message-text">${text}</div>
+                <div class="message-time">
+                    ${timestamp}
+                    ${type === 'sent' ? '<div class="message-status status-single-tick"><i class="fas fa-check"></i></div>' : ''}
+                </div>
+                <div class="message-actions">
+                    <button class="reaction-btn" data-reaction="👍">👍</button>
+                    <button class="reaction-btn" data-reaction="❤️">❤️</button>
+                    <button class="reaction-btn" data-reaction="😂">😂</button>
+                    <button class="reaction-btn" data-reaction="😮">😮</button>
+                </div>
+                <div class="reactions-container" id="reactions-${messageId}"></div>
+            `;
+            
+            messageEl.innerHTML = messageContent;
+            
+            // Add event listeners to reaction buttons
+            const reactionBtns = messageEl.querySelectorAll('.reaction-btn');
+            reactionBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const reaction = this.getAttribute('data-reaction');
+                    socket.emit('message_reaction', {
+                        pin: currentPin,
+                        messageId: messageId,
+                        reaction: reaction
+                    });
+                });
+            });
+            
+            // Add click event to reply preview to scroll to original message
+            const replyElement = messageEl.querySelector('.message-reply');
+            if (replyElement) {
+                replyElement.addEventListener('click', function() {
+                    const originalMessageId = this.getAttribute('data-original-message-id');
+                    const originalMessage = document.querySelector(`[data-message-id="${originalMessageId}"]`);
+                    if (originalMessage) {
+                        originalMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        originalMessage.style.backgroundColor = 'rgba(124, 58, 237, 0.1)';
+                        setTimeout(() => {
+                            originalMessage.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                });
+            }
+            
+            chatContainer.appendChild(messageEl);
+            scrollToBottom();
+            
+            // Update status if available
+            if (messageStatus.has(messageId)) {
+                updateMessageStatus(messageId, messageStatus.get(messageId));
+            }
+        }
+
+        function saveMessageToHistory(text, sender, timestamp, type, messageId, replyTo = null) {
+            chatHistory.push({
+                text, sender, timestamp, type, messageId, replyTo
+            });
+            
+            // Save to localStorage (limit to 100 messages to prevent storage issues)
+            if (chatHistory.length > 100) {
+                chatHistory = chatHistory.slice(-100);
+            }
+            
+            localStorage.setItem(`chithi-history-${currentPin}`, JSON.stringify(chatHistory));
+        }
+
+        function renderChatHistory() {
+            // Clear current messages except the welcome message
+            const welcomeMessage = chatContainer.querySelector('.message:first-child');
+            chatContainer.innerHTML = '';
+            if (welcomeMessage) {
+                chatContainer.appendChild(welcomeMessage);
+            }
+            
+            // Add all messages from history
+            chatHistory.forEach(msg => {
+                addMessage(msg.text, msg.sender, msg.timestamp, msg.type, msg.messageId, msg.replyTo);
+            });
+        }
+
+        function scrollToBottom() {
+            // Scroll to bottom of chat container
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function updateMessageReaction(messageId, reaction) {
+            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (!messageEl) return;
+            
+            const reactionsContainer = messageEl.querySelector('.reactions-container');
+            const existingReaction = reactionsContainer.querySelector(`[data-reaction="${reaction}"]`);
+            
+            if (existingReaction) {
+                const countEl = existingReaction.querySelector('.reaction-count');
+                const count = parseInt(countEl.textContent) + 1;
+                countEl.textContent = count;
+            } else {
+                const reactionEl = document.createElement('div');
+                reactionEl.className = 'reaction';
+                reactionEl.setAttribute('data-reaction', reaction);
+                reactionEl.innerHTML = `
+                    <span>${reaction}</span>
+                    <span class="reaction-count">1</span>
+                `;
+                reactionsContainer.appendChild(reactionEl);
+            }
+        }
+
+        function updateMessageStatus(messageId, status) {
+            const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageEl) {
+                const statusElement = messageEl.querySelector('.message-status');
+                if (statusElement) {
+                    if (status === 'sent') {
+                        statusElement.className = 'message-status status-single-tick';
+                        statusElement.innerHTML = '<i class="fas fa-check"></i>';
+                    } else if (status === 'delivered') {
+                        statusElement.className = 'message-status status-double-tick';
+                        statusElement.innerHTML = '<i class="fas fa-check"></i><i class="fas fa-check"></i>';
+                    } else if (status === 'seen') {
+                        statusElement.className = 'message-status status-triple-tick';
+                        statusElement.innerHTML = '<i class="fas fa-check"></i><i class="fas fa-check"></i><i class="fas fa-check"></i>';
+                    }
+                }
+            }
+        }
+
+        function addSystemMessage(text) {
+            const messageEl = document.createElement('div');
+            messageEl.className = 'message received';
+            messageEl.style.alignSelf = 'center';
+            messageEl.style.backgroundColor = 'transparent';
+            messageEl.style.border = 'none';
+            messageEl.style.fontStyle = 'italic';
+            messageEl.style.color = 'var(--text-secondary)';
+            messageEl.style.textAlign = 'center';
+            messageEl.style.maxWidth = '100%';
+            
+            messageEl.innerHTML = `
+                <div class="message-text">${text}</div>
+            `;
+            
+            chatContainer.appendChild(messageEl);
+            scrollToBottom();
+        }
+
+        function handleTyping() {
+            if (!isTyping) {
+                isTyping = true;
+                socket.emit('typing_start', { 
+                    pin: currentPin,
+                    userName: currentUserName
+                });
+            }
+            
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                isTyping = false;
+                socket.emit('typing_stop', { 
+                    pin: currentPin,
+                    userName: currentUserName
+                });
+            }, 1000);
+        }
+
+        function renderEmojiPicker() {
+            emojis.forEach(emoji => {
+                const emojiOption = document.createElement('div');
+                emojiOption.className = 'emoji-option';
+                emojiOption.textContent = emoji;
+                emojiOption.addEventListener('click', () => {
+                    insertEmoji(emoji);
+                    toggleEmojiPicker();
+                });
+                emojiPicker.appendChild(emojiOption);
+            });
+        }
+
+        function toggleEmojiPicker() {
+            emojiPicker.classList.toggle('show');
+        }
+
+        function insertEmoji(emoji) {
+            const cursorPos = messageInput.selectionStart;
+            const textBefore = messageInput.value.substring(0, cursorPos);
+            const textAfter = messageInput.value.substring(cursorPos);
+            
+            messageInput.value = textBefore + emoji + textAfter;
+            messageInput.focus();
+            messageInput.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
+            
+            autoResizeTextarea(messageInput);
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        function setupMessageInput() {
+            // Close emoji picker when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+                    emojiPicker.classList.remove('show');
+                }
+            });
+        }
+
+        function generateMessageId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function showSettings() {
+            settingsModal.classList.add('active');
+            // Request current users when settings is opened
+            socket.emit('get_current_users', { pin: currentPin });
+        }
+
+        function hideSettings() {
+            settingsModal.classList.remove('active');
+        }
+
+        function showLeaveConfirm() {
+            if (confirm('Are you sure you want to leave this chat? You can rejoin later with the same PIN.')) {
+                leaveRoom();
+            }
+        }
+
+        function changeTheme(theme, broadcast = true) {
+            // Update active theme button
+            themeOptions.forEach(option => {
+                option.classList.remove('active');
+                if (option.getAttribute('data-theme') === theme) {
+                    option.classList.add('active');
+                }
+            });
+            
+            // Apply theme
+            document.body.setAttribute('data-theme', theme);
+            currentTheme = theme;
+            
+            // Save to localStorage
+            localStorage.setItem('chithi-theme', theme);
+            
+            // Broadcast to other users in the room
+            if (broadcast && currentPin) {
+                socket.emit('change_theme', {
+                    pin: currentPin,
+                    theme: theme
+                });
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('chithi-theme') || 'default';
+            changeTheme(savedTheme, false);
+        }
+
+        function deleteRoom() {
+            if (confirm('Are you sure you want to delete this room? This will clear the chat history for all users.')) {
+                socket.emit('delete_room', { pin: currentPin });
+                // Clear local storage for this room
+                localStorage.removeItem(`chithi-history-${currentPin}`);
+                hideSettings();
+            }
+        }
+
+        function leaveRoom() {
+            // Clear user session
+            localStorage.removeItem('chithi-pin');
+            localStorage.removeItem('chithi-username');
+            
+            // Leave the room via socket
+            socket.emit('leave_room', { pin: currentPin });
+            
+            // Reset UI
+            resetChat();
+            hideSettings();
+        }
+
+        function resetChat() {
+            // Clear chat container except the first welcome message
+            const welcomeMessage = chatContainer.querySelector('.message:first-child');
+            chatContainer.innerHTML = '';
+            if (welcomeMessage) {
+                chatContainer.appendChild(welcomeMessage);
+            }
+            
+            // Reset chat history
+            chatHistory = [];
+            
+            // Reset UI state
+            chatScreen.classList.add('hidden');
+            joinScreen.classList.remove('hidden');
+            settingsBtn.classList.add('hidden');
+            leaveChatBtn.classList.add('hidden');
+            userCount.classList.add('hidden');
+            
+            // Clear inputs
+            userNameInput.value = '';
+            clearPin();
+            
+            // Reset PIN display
+            currentPinDisplay.textContent = '----';
+            
+            // Reset current state
+            currentPin = '';
+            currentUserName = '';
+            currentReply = null;
+            replyPreview.classList.add('hidden');
+        }
+
+        // Context menu function
+        function showContextMenu(event, messageId, isOwnMessage) {
+            contextMenu.setAttribute('data-message-id', messageId);
+            
+            // Show/hide unsend option based on ownership
+            contextUnsendBtn.style.display = isOwnMessage ? 'flex' : 'none';
+            
+            contextMenu.style.left = event.clientX + 'px';
+            contextMenu.style.top = event.clientY + 'px';
+            contextMenu.classList.add('show');
+        }
+
+        function handleContextReply() {
+            const messageId = contextMenu.getAttribute('data-message-id');
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                const sender = messageElement.querySelector('.message-sender').textContent;
+                const text = messageElement.querySelector('.message-text').textContent;
+                
+                setCurrentReply({
+                    messageId: messageId,
+                    sender: sender,
+                    text: text
+                });
+            }
+            contextMenu.classList.remove('show');
+        }
+
+        function handleContextUnsend() {
+            const messageId = contextMenu.getAttribute('data-message-id');
+            if (confirm('Are you sure you want to unsend this message? This cannot be undone.')) {
+                socket.emit('unsend_message', {
+                    pin: currentPin,
+                    messageId: messageId
+                });
+                
+                // Remove from UI immediately
+                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+                if (messageElement) {
+                    messageElement.remove();
+                }
+                
+                // Remove from chat history
+                chatHistory = chatHistory.filter(msg => msg.messageId !== messageId);
+                localStorage.setItem(`chithi-history-${currentPin}`, JSON.stringify(chatHistory));
+            }
+            contextMenu.classList.remove('show');
+        }
+
+        function handleContextCopy() {
+            const messageId = contextMenu.getAttribute('data-message-id');
+            const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                const text = messageElement.querySelector('.message-text').textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    // Optional: Show copied notification
+                });
+            }
+            contextMenu.classList.remove('show');
+        }
+
+        function setCurrentReply(reply) {
+            currentReply = reply;
+            replyPreviewSender.textContent = reply.sender;
+            replyPreviewText.textContent = 
+                reply.text.length > 50 ? reply.text.substring(0, 50) + '...' : reply.text;
+            replyPreview.classList.remove('hidden');
+            messageInput.focus();
+        }
+
+        function cancelReply() {
+            currentReply = null;
+            replyPreview.classList.add('hidden');
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
