@@ -9,15 +9,88 @@
     <style>
         /* Your existing CSS styles remain exactly the same */
         /* ... (all the CSS from your original code) ... */
+        
+        /* Add this new CSS for statistics */
+        .stats-container {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-sm);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--border-color);
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .last-updated {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
     <!-- Your existing HTML structure remains exactly the same -->
     <!-- ... (all the HTML from your original code) ... -->
 
+    <!-- Add statistics section to settings modal -->
+    <!-- In your settings modal, add this after the "Current PIN" section: -->
+    
+    <!--
+    <div class="setting-section">
+        <h3 class="setting-title">App Statistics</h3>
+        <div class="stats-container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="statRooms">0</div>
+                    <div class="stat-label">Total Rooms</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statUsers">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statMessages">0</div>
+                    <div class="stat-label">Total Messages</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statActive">0</div>
+                    <div class="stat-label">Active Rooms</div>
+                </div>
+            </div>
+            <div class="last-updated">
+                Last updated: <span id="lastUpdated">Never</span>
+            </div>
+        </div>
+    </div>
+    -->
+
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script>
-        // DOM Elements (same as before)
+        // DOM Elements
         const welcomeScreen = document.getElementById('welcomeScreen');
         const joinScreen = document.getElementById('joinScreen');
         const chatScreen = document.getElementById('chatScreen');
@@ -59,8 +132,15 @@
         const replyPreviewText = document.getElementById('replyPreviewText');
         const cancelReplyBtn = document.getElementById('cancelReplyBtn');
 
-        // Socket.io connection - Use your Render backend URL here
-        const BACKEND_URL = 'https://chithi-backend.onrender.com';
+        // Statistics elements (if you added them)
+        const statRooms = document.getElementById('statRooms');
+        const statUsers = document.getElementById('statUsers');
+        const statMessages = document.getElementById('statMessages');
+        const statActive = document.getElementById('statActive');
+        const lastUpdated = document.getElementById('lastUpdated');
+
+        // Socket.io connection - Use your Render backend URL
+        const BACKEND_URL = 'https://chithi-backend.onrender.com'; // Replace with your actual backend URL
         const socket = io(BACKEND_URL, {
             reconnection: true,
             reconnectionAttempts: 5,
@@ -81,14 +161,6 @@
         // Popular emojis for the picker
         const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
 
-        // JSONBin Statistics
-        let appStats = {
-            totalRooms: 0,
-            totalUsers: 0,
-            totalMessages: 0,
-            lastUpdated: ''
-        };
-
         // Initialize the app
         function init() {
             setupEventListeners();
@@ -96,26 +168,6 @@
             setupMessageInput();
             loadTheme();
             checkForExistingSession();
-            loadAppStatistics();
-        }
-
-        // Load application statistics from backend
-        async function loadAppStatistics() {
-            try {
-                const response = await fetch(`${BACKEND_URL}/api/stats`);
-                if (response.ok) {
-                    appStats = await response.json();
-                    updateStatisticsDisplay();
-                }
-            } catch (error) {
-                console.log('Could not load statistics:', error);
-            }
-        }
-
-        // Update statistics display in the UI
-        function updateStatisticsDisplay() {
-            // You can display statistics in the settings modal or elsewhere
-            console.log('App Statistics:', appStats);
         }
 
         // Check if user was already in a chat session
@@ -242,6 +294,7 @@
         // Socket event handlers
         function handleSocketConnect() {
             status.className = 'status online';
+            console.log('Connected to server');
             
             // Rejoin room if we were in one
             if (currentPin && currentUserName) {
@@ -254,10 +307,12 @@
 
         function handleSocketDisconnect() {
             status.className = 'status offline';
+            console.log('Disconnected from server');
         }
 
         function handleSocketReconnecting() {
             status.className = 'status connecting';
+            console.log('Reconnecting to server...');
         }
 
         function handleUserJoined(data) {
@@ -297,6 +352,8 @@
                 
                 // Update local chat history
                 chatHistory = data.messages;
+                
+                console.log(`Loaded ${data.messages.length} messages from server history`);
             }
         }
 
@@ -310,7 +367,7 @@
         }
 
         function handleMessageReaction(data) {
-            updateMessageReaction(data.messageId, data.reaction);
+            updateMessageReaction(data.messageId, data.reaction, data.count);
         }
 
         function handleThemeChanged(data) {
@@ -376,7 +433,32 @@
             });
         }
 
-        // UI Functions (remain the same as before)
+        // Load app statistics
+        async function loadAppStatistics() {
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/stats`);
+                if (response.ok) {
+                    const stats = await response.json();
+                    updateStatisticsDisplay(stats);
+                }
+            } catch (error) {
+                console.log('Could not load statistics:', error);
+            }
+        }
+
+        function updateStatisticsDisplay(stats) {
+            if (statRooms && statUsers && statMessages && statActive && lastUpdated) {
+                statRooms.textContent = stats.totalRooms;
+                statUsers.textContent = stats.totalUsers;
+                statMessages.textContent = stats.totalMessages;
+                statActive.textContent = stats.activeRooms;
+                
+                const lastUpdatedDate = new Date(stats.lastUpdated);
+                lastUpdated.textContent = lastUpdatedDate.toLocaleString();
+            }
+        }
+
+        // UI Functions
         function showJoinScreen() {
             welcomeScreen.classList.add('hidden');
             joinScreen.classList.remove('hidden');
@@ -615,7 +697,7 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function updateMessageReaction(messageId, reaction) {
+        function updateMessageReaction(messageId, reaction, count = 1) {
             const messageEl = document.querySelector(`[data-message-id="${messageId}"]`);
             if (!messageEl) return;
             
@@ -624,7 +706,6 @@
             
             if (existingReaction) {
                 const countEl = existingReaction.querySelector('.reaction-count');
-                const count = parseInt(countEl.textContent) + 1;
                 countEl.textContent = count;
             } else {
                 const reactionEl = document.createElement('div');
@@ -632,7 +713,7 @@
                 reactionEl.setAttribute('data-reaction', reaction);
                 reactionEl.innerHTML = `
                     <span>${reaction}</span>
-                    <span class="reaction-count">1</span>
+                    <span class="reaction-count">${count}</span>
                 `;
                 reactionsContainer.appendChild(reactionEl);
             }
@@ -746,6 +827,8 @@
             settingsModal.classList.add('active');
             // Request current users when settings is opened
             socket.emit('get_current_users', { pin: currentPin });
+            // Load statistics
+            loadAppStatistics();
         }
 
         function hideSettings() {
