@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1251,6 +1250,34 @@
             line-height: 1.4;
         }
 
+        /* Notification Permission Button */
+        .notification-permission {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius-sm);
+            padding: 16px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .notification-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .btn-notification {
+            background-color: var(--primary);
+            color: white;
+            width: 100%;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .btn-notification:hover {
+            background-color: var(--primary-dark);
+        }
+
         /* Responsive Design */
         @media (max-width: 480px) {
             .container {
@@ -1476,6 +1503,20 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="setting-section">
+                    <h3 class="setting-title">Browser Notifications</h3>
+                    <div class="notification-permission">
+                        <p class="notification-text">Get notified when someone joins the room or sends a message</p>
+                        <button class="btn btn-notification" id="enableNotificationsBtn">
+                            <i class="fas fa-bell"></i>
+                            Enable Notifications
+                        </button>
+                        <div class="notification-status" id="notificationStatus">
+                            <!-- Notification status will be shown here -->
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="setting-section">
                     <h3 class="setting-title">Theme</h3>
@@ -1617,6 +1658,8 @@
         const replyPreviewSender = document.getElementById('replyPreviewSender');
         const replyPreviewText = document.getElementById('replyPreviewText');
         const cancelReplyBtn = document.getElementById('cancelReplyBtn');
+        const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+        const notificationStatus = document.getElementById('notificationStatus');
 
         // Socket.io connection - Use your Render backend URL here
         const BACKEND_URL = 'https://chithi-backend.onrender.com';
@@ -1636,6 +1679,7 @@
         let currentUsers = [];
         let currentReply = null;
         let messageStatus = new Map();
+        let notificationPermission = 'default';
 
         // Popular emojis for the picker
         const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
@@ -1647,6 +1691,76 @@
             setupMessageInput();
             loadTheme();
             checkForExistingSession();
+            checkNotificationPermission();
+        }
+
+        // Check browser notification permission
+        function checkNotificationPermission() {
+            if (!("Notification" in window)) {
+                notificationStatus.innerHTML = '<p style="color: var(--danger); font-size: 0.8rem;">Browser does not support notifications</p>';
+                enableNotificationsBtn.style.display = 'none';
+                return;
+            }
+
+            notificationPermission = Notification.permission;
+            
+            if (notificationPermission === 'granted') {
+                notificationStatus.innerHTML = '<p style="color: var(--secondary); font-size: 0.8rem;">✓ Notifications enabled</p>';
+                enableNotificationsBtn.style.display = 'none';
+            } else if (notificationPermission === 'denied') {
+                notificationStatus.innerHTML = '<p style="color: var(--danger); font-size: 0.8rem;">❌ Notifications blocked. Please enable in browser settings.</p>';
+                enableNotificationsBtn.style.display = 'none';
+            } else {
+                notificationStatus.innerHTML = '<p style="color: var(--warning); font-size: 0.8rem;">Notifications not enabled</p>';
+                enableNotificationsBtn.style.display = 'block';
+            }
+        }
+
+        // Request notification permission
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("This browser does not support notifications");
+                return;
+            }
+
+            Notification.requestPermission().then(function(permission) {
+                notificationPermission = permission;
+                checkNotificationPermission();
+                
+                if (permission === "granted") {
+                    // Show a test notification
+                    showBrowserNotification('চিঠি', 'Notifications are now enabled! You will be notified when users join or send messages.');
+                }
+            });
+        }
+
+        // Show browser notification
+        function showBrowserNotification(title, message, tag = 'chithi-notification') {
+            if (notificationPermission !== 'granted') return;
+            
+            // Check if the page is visible - don't show notification if user is on the page
+            if (document.visibilityState === 'visible') return;
+
+            const options = {
+                body: message,
+                icon: '/favicon.ico', // You can add an icon if available
+                tag: tag,
+                requireInteraction: false
+            };
+
+            // Show notification
+            const notification = new Notification(title, options);
+            
+            // Auto close after 5 seconds
+            setTimeout(() => {
+                notification.close();
+            }, 5000);
+
+            // Focus on the tab when notification is clicked
+            notification.onclick = function() {
+                window.focus();
+                notification.close();
+            };
         }
 
         // Check if user was already in a chat session
@@ -1707,6 +1821,7 @@
             contextReplyBtn.addEventListener('click', handleContextReply);
             contextUnsendBtn.addEventListener('click', handleContextUnsend);
             contextCopyBtn.addEventListener('click', handleContextCopy);
+            enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
             
             // Theme selection
             themeOptions.forEach(option => {
@@ -1767,6 +1882,12 @@
             socket.on('current_users', handleCurrentUsers);
             socket.on('message_status_update', handleMessageStatusUpdate);
             socket.on('message_unsent', handleMessageUnsent);
+            socket.on('browser_notification', handleBrowserNotification);
+        }
+
+        // Handle browser notification from server
+        function handleBrowserNotification(data) {
+            showBrowserNotification(data.title, data.message);
         }
 
         // Socket event handlers
