@@ -1278,6 +1278,78 @@
             background-color: var(--primary-dark);
         }
 
+        /* Custom Notification Toast */
+        .custom-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-sm);
+            box-shadow: var(--shadow);
+            padding: 16px;
+            max-width: 300px;
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            border-left: 4px solid var(--primary);
+            animation: slideInRight 0.3s ease-out;
+            transition: var(--transition);
+        }
+
+        .custom-notification.show {
+            display: flex;
+        }
+
+        @keyframes slideInRight {
+            0% { transform: translateX(100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        .custom-notification.hide {
+            animation: slideOutRight 0.3s ease-out;
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        @keyframes slideOutRight {
+            0% { transform: translateX(0); opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+
+        .notification-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .notification-message {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .notification-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-close:hover {
+            background: var(--bg-secondary);
+        }
+
         /* Responsive Design */
         @media (max-width: 480px) {
             .container {
@@ -1310,6 +1382,12 @@
             
             .theme-options {
                 grid-template-columns: 1fr;
+            }
+
+            .custom-notification {
+                right: 10px;
+                left: 10px;
+                max-width: none;
             }
         }
 
@@ -1461,6 +1539,15 @@
         </div>
     </div>
 
+    <!-- Custom Notification Toast -->
+    <div class="custom-notification" id="customNotification">
+        <button class="notification-close" id="closeNotificationBtn">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="notification-title" id="notificationTitle"></div>
+        <div class="notification-message" id="notificationMessage"></div>
+    </div>
+
     <!-- Context Menu -->
     <div class="message-context-menu" id="contextMenu">
         <button class="context-menu-item" id="contextReplyBtn">
@@ -1505,12 +1592,16 @@
                 </div>
 
                 <div class="setting-section">
-                    <h3 class="setting-title">Browser Notifications</h3>
+                    <h3 class="setting-title">Notifications</h3>
                     <div class="notification-permission">
                         <p class="notification-text">Get notified when someone joins the room or sends a message</p>
                         <button class="btn btn-notification" id="enableNotificationsBtn">
                             <i class="fas fa-bell"></i>
-                            Enable Notifications
+                            Enable Browser Notifications
+                        </button>
+                        <button class="btn btn-secondary" id="enableCustomNotificationsBtn" style="width: 100%; justify-content: center;">
+                            <i class="fas fa-bell-slash"></i>
+                            Enable In-App Notifications
                         </button>
                         <div class="notification-status" id="notificationStatus">
                             <!-- Notification status will be shown here -->
@@ -1659,7 +1750,12 @@
         const replyPreviewText = document.getElementById('replyPreviewText');
         const cancelReplyBtn = document.getElementById('cancelReplyBtn');
         const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+        const enableCustomNotificationsBtn = document.getElementById('enableCustomNotificationsBtn');
         const notificationStatus = document.getElementById('notificationStatus');
+        const customNotification = document.getElementById('customNotification');
+        const notificationTitle = document.getElementById('notificationTitle');
+        const notificationMessage = document.getElementById('notificationMessage');
+        const closeNotificationBtn = document.getElementById('closeNotificationBtn');
 
         // Socket.io connection - Use your Render backend URL here
         const BACKEND_URL = 'https://chithi-backend.onrender.com';
@@ -1680,6 +1776,9 @@
         let currentReply = null;
         let messageStatus = new Map();
         let notificationPermission = 'default';
+        let customNotificationsEnabled = true; // Default to true for fallback
+        let browserNotificationsEnabled = false;
+        let notificationTimeout;
 
         // Popular emojis for the picker
         const emojis = ['😀', '😂', '🥰', '😎', '😍', '🤔', '👍', '❤️', '🔥', '🎉', '🙏', '💯', '👋', '🤝', '🙌', '👏', '🤗', '😊', '🤩', '😜', '🤪', '😇', '🥳', '😭', '😡', '🥺', '😱', '🤯', '😴', '💀', '👻', '💩', '🤡', '👀', '🎃', '💔', '💪', '🧠', '👑', '💎', '⭐', '🌈', '🍕', '🍦', '⚽', '🎮', '🚀', '💻', '📱', '🎵', '🎨', '💰', '🕶️', '🎁'];
@@ -1691,76 +1790,204 @@
             setupMessageInput();
             loadTheme();
             checkForExistingSession();
-            checkNotificationPermission();
+            checkNotificationSupport();
+        }
+
+        // Check browser notification support and set up appropriate notification system
+        function checkNotificationSupport() {
+            // Check if browser supports notifications
+            const browserSupportsNotifications = 'Notification' in window;
+            
+            // Check if we're in a WebView (common in Android apps)
+            const isWebView = /(WebView|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini)/i.test(navigator.userAgent) && 
+                             !/(Chrome|Firefox|Safari|Edge)/i.test(navigator.userAgent);
+            
+            if (!browserSupportsNotifications || isWebView) {
+                // Browser doesn't support notifications or we're in WebView
+                notificationStatus.innerHTML = '<p style="color: var(--warning); font-size: 0.8rem;">⚠️ Using in-app notifications (compatible with all browsers)</p>';
+                enableNotificationsBtn.style.display = 'none';
+                browserNotificationsEnabled = false;
+                customNotificationsEnabled = true;
+                
+                // Save preference
+                localStorage.setItem('chithi-custom-notifications', 'true');
+                localStorage.setItem('chithi-browser-notifications', 'false');
+            } else {
+                // Browser supports notifications
+                checkBrowserNotificationPermission();
+            }
+            
+            // Load custom notification preference
+            const savedCustomNotifications = localStorage.getItem('chithi-custom-notifications');
+            if (savedCustomNotifications !== null) {
+                customNotificationsEnabled = savedCustomNotifications === 'true';
+            }
+            
+            updateNotificationButtonText();
         }
 
         // Check browser notification permission
-        function checkNotificationPermission() {
-            if (!("Notification" in window)) {
-                notificationStatus.innerHTML = '<p style="color: var(--danger); font-size: 0.8rem;">Browser does not support notifications</p>';
-                enableNotificationsBtn.style.display = 'none';
+        function checkBrowserNotificationPermission() {
+            if (!('Notification' in window)) {
+                browserNotificationsEnabled = false;
                 return;
             }
 
             notificationPermission = Notification.permission;
             
             if (notificationPermission === 'granted') {
-                notificationStatus.innerHTML = '<p style="color: var(--secondary); font-size: 0.8rem;">✓ Notifications enabled</p>';
+                notificationStatus.innerHTML = '<p style="color: var(--secondary); font-size: 0.8rem;">✓ Browser notifications enabled</p>';
                 enableNotificationsBtn.style.display = 'none';
+                browserNotificationsEnabled = true;
+                customNotificationsEnabled = false;
             } else if (notificationPermission === 'denied') {
-                notificationStatus.innerHTML = '<p style="color: var(--danger); font-size: 0.8rem;">❌ Notifications blocked. Please enable in browser settings.</p>';
+                notificationStatus.innerHTML = '<p style="color: var(--danger); font-size: 0.8rem;">❌ Browser notifications blocked</p>';
                 enableNotificationsBtn.style.display = 'none';
+                browserNotificationsEnabled = false;
+                customNotificationsEnabled = true;
             } else {
-                notificationStatus.innerHTML = '<p style="color: var(--warning); font-size: 0.8rem;">Notifications not enabled</p>';
+                notificationStatus.innerHTML = '<p style="color: var(--warning); font-size: 0.8rem;">Browser notifications not enabled</p>';
                 enableNotificationsBtn.style.display = 'block';
+                browserNotificationsEnabled = false;
+                customNotificationsEnabled = true;
+            }
+            
+            // Save preferences
+            localStorage.setItem('chithi-browser-notifications', browserNotificationsEnabled.toString());
+            localStorage.setItem('chithi-custom-notifications', customNotificationsEnabled.toString());
+        }
+
+        // Update notification button text based on current state
+        function updateNotificationButtonText() {
+            if (customNotificationsEnabled) {
+                enableCustomNotificationsBtn.innerHTML = '<i class="fas fa-bell"></i> In-App Notifications Enabled';
+                enableCustomNotificationsBtn.classList.remove('btn-secondary');
+                enableCustomNotificationsBtn.classList.add('btn-primary');
+            } else {
+                enableCustomNotificationsBtn.innerHTML = '<i class="fas fa-bell-slash"></i> Enable In-App Notifications';
+                enableCustomNotificationsBtn.classList.remove('btn-primary');
+                enableCustomNotificationsBtn.classList.add('btn-secondary');
             }
         }
 
-        // Request notification permission
-        function requestNotificationPermission() {
-            if (!("Notification" in window)) {
-                alert("This browser does not support notifications");
+        // Request browser notification permission
+        function requestBrowserNotificationPermission() {
+            if (!('Notification' in window)) {
+                showCustomNotification('চিঠি', 'Your browser does not support notifications');
                 return;
             }
 
             Notification.requestPermission().then(function(permission) {
                 notificationPermission = permission;
-                checkNotificationPermission();
+                checkBrowserNotificationPermission();
                 
                 if (permission === "granted") {
                     // Show a test notification
-                    showBrowserNotification('চিঠি', 'Notifications are now enabled! You will be notified when users join or send messages.');
+                    showBrowserNotification('চিঠি', 'Browser notifications are now enabled!');
+                    browserNotificationsEnabled = true;
+                    customNotificationsEnabled = false;
                 }
             });
         }
 
+        // Toggle custom notifications
+        function toggleCustomNotifications() {
+            customNotificationsEnabled = !customNotificationsEnabled;
+            if (customNotificationsEnabled) {
+                browserNotificationsEnabled = false;
+            }
+            
+            // Save preferences
+            localStorage.setItem('chithi-custom-notifications', customNotificationsEnabled.toString());
+            localStorage.setItem('chithi-browser-notifications', browserNotificationsEnabled.toString());
+            
+            updateNotificationButtonText();
+            
+            // Show confirmation
+            if (customNotificationsEnabled) {
+                showCustomNotification('চিঠি', 'In-app notifications enabled');
+            } else {
+                showCustomNotification('চিঠি', 'In-app notifications disabled');
+            }
+        }
+
         // Show browser notification
         function showBrowserNotification(title, message, tag = 'chithi-notification') {
-            if (notificationPermission !== 'granted') return;
+            if (!browserNotificationsEnabled || notificationPermission !== 'granted') return;
             
             // Check if the page is visible - don't show notification if user is on the page
             if (document.visibilityState === 'visible') return;
 
-            const options = {
-                body: message,
-                icon: '/favicon.ico', // You can add an icon if available
-                tag: tag,
-                requireInteraction: false
-            };
+            try {
+                const options = {
+                    body: message,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">✉️</text></svg>',
+                    tag: tag,
+                    requireInteraction: false
+                };
 
-            // Show notification
-            const notification = new Notification(title, options);
+                // Show notification
+                const notification = new Notification(title, options);
+                
+                // Auto close after 5 seconds
+                setTimeout(() => {
+                    notification.close();
+                }, 5000);
+
+                // Focus on the tab when notification is clicked
+                notification.onclick = function() {
+                    window.focus();
+                    notification.close();
+                };
+            } catch (error) {
+                console.error('Error showing browser notification:', error);
+                // Fallback to custom notification
+                showCustomNotification(title, message);
+            }
+        }
+
+        // Show custom in-app notification
+        function showCustomNotification(title, message) {
+            if (!customNotificationsEnabled) return;
             
-            // Auto close after 5 seconds
-            setTimeout(() => {
-                notification.close();
+            // Clear any existing notification timeout
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+            }
+            
+            // Update notification content
+            notificationTitle.textContent = title;
+            notificationMessage.textContent = message;
+            
+            // Show notification
+            customNotification.classList.remove('hide');
+            customNotification.classList.add('show');
+            
+            // Auto hide after 5 seconds
+            notificationTimeout = setTimeout(() => {
+                hideCustomNotification();
             }, 5000);
+        }
 
-            // Focus on the tab when notification is clicked
-            notification.onclick = function() {
-                window.focus();
-                notification.close();
-            };
+        // Hide custom notification
+        function hideCustomNotification() {
+            customNotification.classList.remove('show');
+            customNotification.classList.add('hide');
+            
+            // Remove hide class after animation completes
+            setTimeout(() => {
+                customNotification.classList.remove('hide');
+            }, 300);
+        }
+
+        // Universal notification function that uses the best available method
+        function showUniversalNotification(title, message) {
+            if (browserNotificationsEnabled && notificationPermission === 'granted') {
+                showBrowserNotification(title, message);
+            } else if (customNotificationsEnabled) {
+                showCustomNotification(title, message);
+            }
+            // If both are disabled, don't show any notification
         }
 
         // Check if user was already in a chat session
@@ -1821,7 +2048,9 @@
             contextReplyBtn.addEventListener('click', handleContextReply);
             contextUnsendBtn.addEventListener('click', handleContextUnsend);
             contextCopyBtn.addEventListener('click', handleContextCopy);
-            enableNotificationsBtn.addEventListener('click', requestNotificationPermission);
+            enableNotificationsBtn.addEventListener('click', requestBrowserNotificationPermission);
+            enableCustomNotificationsBtn.addEventListener('click', toggleCustomNotifications);
+            closeNotificationBtn.addEventListener('click', hideCustomNotification);
             
             // Theme selection
             themeOptions.forEach(option => {
@@ -1882,12 +2111,12 @@
             socket.on('current_users', handleCurrentUsers);
             socket.on('message_status_update', handleMessageStatusUpdate);
             socket.on('message_unsent', handleMessageUnsent);
-            socket.on('browser_notification', handleBrowserNotification);
+            socket.on('browser_notification', handleBrowserNotificationEvent);
         }
 
         // Handle browser notification from server
-        function handleBrowserNotification(data) {
-            showBrowserNotification(data.title, data.message);
+        function handleBrowserNotificationEvent(data) {
+            showUniversalNotification(data.title, data.message);
         }
 
         // Socket event handlers
@@ -1914,15 +2143,30 @@
         function handleUserJoined(data) {
             addSystemMessage(`${data.userName} joined the chat`);
             connectionStatus.classList.add('hidden');
+            
+            // Show notification if it's not the current user
+            if (data.userName !== currentUserName) {
+                showUniversalNotification('চিঠি - New User', `${data.userName} joined the chat`);
+            }
         }
 
         function handleUserLeft(data) {
             addSystemMessage(`${data.userName} left the chat`);
+            
+            // Show notification if it's not the current user
+            if (data.userName !== currentUserName) {
+                showUniversalNotification('চিঠি - User Left', `${data.userName} left the chat`);
+            }
         }
 
         function handleNewMessage(data) {
             addMessage(data.message, data.sender, data.timestamp, 'received', data.messageId, data.replyTo);
             saveMessageToHistory(data.message, data.sender, data.timestamp, 'received', data.messageId, data.replyTo);
+            
+            // Show notification if it's not from current user and app is not focused
+            if (data.sender !== currentUserName && document.visibilityState !== 'visible') {
+                showUniversalNotification(`চিঠি - ${data.sender}`, data.message);
+            }
             
             // Update message status for sender
             socket.emit('message_delivered', {
