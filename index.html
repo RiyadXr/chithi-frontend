@@ -954,6 +954,69 @@
             text-align: center;
         }
 
+        /* UPDATED: Connection Notification - Smaller and positioned lower */
+        .connection-notification {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 1001;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+            opacity: 0;
+            visibility: hidden;
+            font-size: 0.8rem;
+            max-width: 280px;
+        }
+
+        .connection-notification.show {
+            opacity: 1;
+            visibility: visible;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .connection-notification.fade-out {
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            0% { transform: translateX(-50%) translateY(-10px); opacity: 0; }
+            100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .connection-notification.connecting {
+            background: var(--warning);
+            color: white;
+        }
+
+        .connection-notification.connected {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .connection-notification.disconnected {
+            background: var(--danger);
+            color: white;
+        }
+
+        .notification-icon {
+            font-size: 0.8rem;
+        }
+
+        .notification-text {
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
         /* Settings Modal */
         .modal-overlay {
             position: fixed;
@@ -1348,6 +1411,15 @@
             .theme-options {
                 grid-template-columns: 1fr;
             }
+            
+            /* UPDATED: Connection notification adjustments for mobile */
+            .connection-notification {
+                top: 70px;
+                left: 10px;
+                right: 10px;
+                transform: none;
+                max-width: none;
+            }
         }
 
         @media (max-height: 700px) {
@@ -1370,6 +1442,12 @@
     </style>
 </head>
 <body>
+    <!-- UPDATED: Connection Notification - Smaller and positioned lower -->
+    <div class="connection-notification" id="connectionNotification">
+        <i class="fas fa-circle-notch fa-spin notification-icon" id="notificationIcon"></i>
+        <span class="notification-text" id="notificationText">Connecting to server...</span>
+    </div>
+
     <div class="container">
         <!-- Header -->
         <div class="header">
@@ -1704,6 +1782,11 @@
         // NEW: Download App Buttons
         const downloadAppBtnWelcome = document.getElementById('downloadAppBtnWelcome');
         const downloadAppBtnSettings = document.getElementById('downloadAppBtnSettings');
+        
+        // NEW: Connection Notification Elements
+        const connectionNotification = document.getElementById('connectionNotification');
+        const notificationIcon = document.getElementById('notificationIcon');
+        const notificationText = document.getElementById('notificationText');
 
         // App download URL
         const APP_DOWNLOAD_URL = 'https://rivistastore.netlify.app/';
@@ -1737,6 +1820,31 @@
             setupMessageInput();
             loadTheme();
             checkForExistingSession();
+            
+            // NEW: Show initial connecting notification
+            showConnectionNotification('Connecting to server...', 'connecting');
+        }
+
+        // NEW: Connection Notification Functions
+        function showConnectionNotification(message, type) {
+            notificationText.textContent = message;
+            connectionNotification.className = 'connection-notification show ' + type;
+            
+            // Update icon based on type
+            if (type === 'connecting') {
+                notificationIcon.className = 'fas fa-circle-notch fa-spin notification-icon';
+            } else if (type === 'connected') {
+                notificationIcon.className = 'fas fa-check notification-icon';
+            } else if (type === 'disconnected') {
+                notificationIcon.className = 'fas fa-exclamation-triangle notification-icon';
+            }
+        }
+
+        function hideConnectionNotification() {
+            connectionNotification.classList.add('fade-out');
+            setTimeout(() => {
+                connectionNotification.classList.remove('show', 'fade-out');
+            }, 500);
         }
 
         // Check if user was already in a chat session
@@ -1872,6 +1980,12 @@
         function handleSocketConnect() {
             status.className = 'status online';
             
+            // NEW: Show connected notification and hide after 3 seconds
+            showConnectionNotification('Connected, enjoy chatting!', 'connected');
+            setTimeout(() => {
+                hideConnectionNotification();
+            }, 3000);
+            
             // Rejoin room if we were in one
             if (currentPin && currentUserName) {
                 socket.emit('join_room', { 
@@ -1883,10 +1997,18 @@
 
         function handleSocketDisconnect() {
             status.className = 'status offline';
+            
+            // NEW: Show disconnected notification and keep it visible
+            showConnectionNotification('Disconnected from server. Trying to reconnect...', 'disconnected');
+            // Don't hide this notification automatically - it will stay until reconnected
         }
 
         function handleSocketReconnecting() {
             status.className = 'status connecting';
+            
+            // NEW: Show reconnecting notification
+            showConnectionNotification('Reconnecting to server...', 'connecting');
+            // Don't hide this notification automatically - it will stay until connected
         }
 
         function handleUserJoined(data) {
